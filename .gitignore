@@ -26,3 +26,12 @@
 *.exe
 *.out
 *.app
+
+# Qt stuff
+*.pro.user
+
+# Win stuff
+*.db
+
+# Working directory
+/Install
