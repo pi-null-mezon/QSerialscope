@@ -23,9 +23,10 @@
 #include <QThread>
 
 #include "about.h"
-#include "qplot.h"
+#include "qeasyplot.h"
 #include "qserialprocessor.h"
 #include "qharmonicprocessor.h"
+#include "qtransmissiondialog.h"
 
 class MainWindow : public QMainWindow
 {
@@ -40,7 +41,7 @@ public slots:
     void openSerialConnection();    // Open a new one serial connection
     void closeSerialConnection();   // Close previous serial connection
     void startRecord();             // Open dialog to choose output file name
-    void makeRecord(const QByteArray &data); // Make record to output file
+    void makeRecord(const quint16 *pointer, quint16 length); // Make record to output file
     void adjustStrobe();
 
 signals:
@@ -50,14 +51,10 @@ signals:
 protected:
     void contextMenuEvent(QContextMenuEvent *event);
 
-
 private:
     QWidget *pt_centralWidget;
     QVBoxLayout *pt_centralLayout;
-    QPlot *pt_plotWidget;
-    QPlot *pt_signalPlot;
-    QPlot *pt_spectrumPlot;
-
+    QEasyPlot *pt_signalPlot;
     QAction *pt_startAction;
     QAction *pt_stopAction;
     QAction *pt_aboutAction;
@@ -66,16 +63,14 @@ private:
     QAction *pt_strobeAction;
     QMenu *pt_controlMenu;
     QMenu *pt_helpMenu;
-
     QTimer m_timer;
     QTextStream m_textstream;
     QFile m_outputfile; 
-
     QSerialProcessor *pt_serialProcessor;
     QHarmonicProcessor *pt_harmonicProcessor;
-
     QThread *pt_serialThread;
     QThread *pt_harmonicThread;
+    QTransmissionDialog m_transmissionDialog;
 
     void _createActions();
     void _createMenus();

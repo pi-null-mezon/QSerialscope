@@ -20,21 +20,25 @@ DEFINES +=  APP_NAME=\\\"$${TARGET}\\\" \
 #--------------------Sources----------------------
 SOURCES +=  main.cpp\
             mainwindow.cpp \
-            qplot.cpp \
             qserialprocessor.cpp \
-            qharmonicprocessor.cpp
+            qharmonicprocessor.cpp \
+    qtransmissiondialog.cpp
 
 HEADERS  += mainwindow.h \
-            qplot.h \
             about.h \
             qserialprocessor.h \
-            qharmonicprocessor.h
+            qharmonicprocessor.h \
+    qtransmissiondialog.h
 
 #------------------3rd parties---------------------
 include(FFTW.pri)
+include(QEasyPlot.pri)
 
 #--------------------CONFIG------------------------
 #RC_ICONS = $$PWD/../Resources/Images/App_ico.ico
 CONFIG(release, debug|release): DEFINES += QT_NO_WARNING_OUTPUT
-
 win32-g++: DEFINES += MINGW_COMPILER
+
+FORMS += \
+    qtransmissiondialog.ui
+

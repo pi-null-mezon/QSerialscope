@@ -4,16 +4,16 @@
 #include <cmath>
 #endif
 
-QHarmonicProcessor::QHarmonicProcessor(QObject *parent, quint32 length_of_data, quint32 length_of_buffer) :
+QHarmonicProcessor::QHarmonicProcessor(QObject *parent, quint16 length_of_data, quint16 length_of_buffer) :
                     QObject(parent),
                     m_datalength(length_of_data),
                     m_bufferlength(length_of_buffer),
                     m_curpos(0),
                     m_SNR(-5.0),
                     m_frequency(0.0),
-                    m_strobe(64),
+                    m_strobe(1),
                     m_counter(0),
-                    m_accumulator(0.0),
+                    m_accumulator(0.0)
 {   
     v_RAW = new qreal[m_datalength];
     v_Signal = new qreal[m_datalength];
@@ -38,25 +38,24 @@ QHarmonicProcessor::~QHarmonicProcessor()
     fftw_free(v_Spectrum);
 }
 
-void QHarmonicProcessor::readByteBuffer(const QByteArray &buffer)
+void QHarmonicProcessor::readData(const quint16 *v_data, quint16 data_length)
 {
     quint16 records = 0;
-    //Enroll new data with strobe, may work slow on low m_strobe values
-    for(int i = 0; i < buffer.length(); i++) // from the beginning to the end
+    for(quint16 i = 0; i < data_length; i++)
     {
-        m_accumulator += (quint8)buffer.at(i);
+        m_accumulator += v_data[i];
         if( (m_counter++) == m_strobe )
         {
             v_RAW[loop(m_curpos + records)] = m_accumulator / m_strobe;
-            //refresh accumulators
             m_accumulator = 0.0;
             m_counter = 0;
-            records++; // increment counter of records for v_RAW
+            records++;
         }
     }
 
     if(records > 0)
     {
+        emit dataUpdated(v_RAW, m_datalength);
         qreal mean = 0.0;
         for(quint32 j = 0; j < m_datalength; j++)
         {
@@ -89,7 +88,7 @@ qreal QHarmonicProcessor::computeFrequency()
     quint32 temp_m_curpos = m_curpos-1; // save current m_curpos
     qreal buffer_duration = 0.0; // refresh data duration
 
-    fftw_plan p = fftw_plan_dft_r2c_1d(m_bufferlength, v_RAWForFFT, v_Spectrum, FFTW_ESTIMATE);
+    fftw_plan p = fftw_plan_dft_r2c_1d(m_bufferlength, v_DataForFFT, v_Spectrum, FFTW_ESTIMATE);
     //Data preparation
     quint32 position = 0;
     for (quint32 i = 0; i < m_bufferlength; i++)
@@ -99,15 +98,15 @@ qreal QHarmonicProcessor::computeFrequency()
     }
     fftw_execute(p);
 
-    for(quint32 i = 0; i < m_bufferlength/2 + 1; i++)
+    for(quint16 i = 0; i < m_bufferlength/2 + 1; i++)
     {
         v_Amplitude[i] = (v_Spectrum[i][0]*v_Spectrum[i][0] + v_Spectrum[i][1]*v_Spectrum[i][1])/5000;
     }
     emit spectrumUpdated(v_Amplitude,m_bufferlength/2 + 1);
 
     //position of max harmonic searching
-    quint32 lower_bound = (quint32)(LOWER_HR_LIMIT * buffer_duration / 1000); //You should ensure that ( LOW_HR_LIMIT < discretization frequency / 2 )
-    quint32 index_of_maxpower = 0;
+    quint16 lower_bound = (quint16)(LOWER_HR_LIMIT * buffer_duration / 1000); //You should ensure that ( LOW_HR_LIMIT < discretization frequency / 2 )
+    quint16 index_of_maxpower = 0;
     qreal maxpower = 0.0;
 
     for (unsigned int i = ( lower_bound + HALF_INTERVAL ); i < ( (m_bufferlength / 2 + 1) - HALF_INTERVAL ); i++)
@@ -122,7 +121,7 @@ qreal QHarmonicProcessor::computeFrequency()
     //SNR estimation
     qreal noise_power = 0.0;
     qreal signal_power = 0.0;
-    for (quint32 i = lower_bound; i < (m_bufferlength / 2 + 1); i++)
+    for (quint16 i = lower_bound; i < (m_bufferlength / 2 + 1); i++)
     {
         if ( ( (i > (index_of_maxpower - HALF_INTERVAL )) && (i < (index_of_maxpower + HALF_INTERVAL) ) ) || ( (i > (2 * index_of_maxpower - HALF_INTERVAL )) && (i < (2 * index_of_maxpower + HALF_INTERVAL) ) ) )
         {
@@ -163,18 +162,17 @@ quint32 QHarmonicProcessor::getBufferlength() const
     return m_bufferlength;
 }
 
-quint16 QHarmonicProcessor::setStrobe(int value)
+void QHarmonicProcessor::setStrobe(int value)
 {
-    if(value <= 0)
+    if(value > 0)
+    {
+        m_strobe = value;
+    }
+    else
     {
         m_strobe = MIN_STROBE;
-        return -1; // incoming value were incorrect code
     }
-    // implicit else branch
-    m_strobe = value;
-    return 0; // Ok code
 }
-
 
 quint16 QHarmonicProcessor::getStrobe() const
 {

@@ -21,29 +21,30 @@ class QHarmonicProcessor : public QObject
 {
     Q_OBJECT
 public:
-    explicit QHarmonicProcessor(QObject *parent = 0, quint32 length_of_data = 1024, quint32 length_of_buffer = 512);
+    explicit QHarmonicProcessor(QObject *parent = 0, quint16 length_of_data = 1024, quint16 length_of_buffer = 512);
     ~QHarmonicProcessor();
     quint32 getDatalength() const;
     quint32 getBufferlength() const;
 
 signals:
-    void signalUpdated(const qreal *pointer_to_data, quint32 length_of_data);
-    void spectrumUpdated(const qreal *pointer_to_data, quint32 length_of_data);
+    void signalUpdated(const qreal *pointer_to_data, quint16 length_of_data);
+    void spectrumUpdated(const qreal *pointer_to_data, quint16 length_of_data);
     void frequencyUpdated(qreal frequency_value, qreal m_SNR_value);
+    void dataUpdated(const qreal *pointer_to_data, quint16 length_of_data);
 
 public slots:
-    void  readByteBuffer(const QByteArray &buffer);
+    void  readData(const quint16 *v_data, quint16 data_length);
     qreal computeFrequency();
-    quint16 setStrobe(int value);
+    void setStrobe(int value);
     quint16 getStrobe() const;
 
 private:
     qreal *v_RAW;           //a pointer to spattialy averaged data (you should use it to write data to an instance of a class)
     qreal *v_DataForFFT;     //a pointer to data prepared for FFT, explicit float because fftwf (single precision) is used
     qreal m_frequency;      //a variable for storing a last evaluated frequency of the 'strongest' harmonic
-    quint32 m_curpos;       //a current position I meant
-    quint32 m_datalength;   //a length of data array
-    quint32 m_bufferlength; //a lenght of sub data array for FFT (m_bufferlength should be <= m_datalength)
+    quint16 m_curpos;       //a current position I meant
+    quint16 m_datalength;   //a length of data array
+    quint16 m_bufferlength; //a lenght of sub data array for FFT (m_bufferlength should be <= m_datalength)
     qreal *v_Signal;        //a pointer to centered and normalized data (typedefinition from fftw3.h, a single precision complex float number type)
     qreal m_SNR;            // a variable for signal-to-noise ratio estimation storing
     fftw_complex *v_Spectrum;  // a pointer to an array for FFT-spectrum
@@ -52,10 +53,10 @@ private:
     quint16 m_counter;      // a counter of strobe length
     qreal m_accumulator;    // accumulator for values in strobe
 
-    quint32 loop(qint64) const; //a function that return a loop-index (not '' because 'inline' )
+    quint16 loop(qint32) const; //a function that return a loop-index (not '' because 'inline' )
 };
 //---------------------------------------------------------------------------
-inline quint32 QHarmonicProcessor::loop(qint64 difference) const
+inline quint16 QHarmonicProcessor::loop(qint32 difference) const
 {
     return ((m_datalength + (difference % m_datalength)) % m_datalength); // have finded it on wikipedia ), it always returns positive result
 }
