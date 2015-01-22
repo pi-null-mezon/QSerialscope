@@ -21,7 +21,7 @@ class QHarmonicProcessor : public QObject
 {
     Q_OBJECT
 public:
-    explicit QHarmonicProcessor(QObject *parent = 0, quint16 length_of_data = 1024, quint16 length_of_buffer = 512);
+    explicit QHarmonicProcessor(QObject *parent = 0, quint16 length_of_data = 512, quint16 length_of_buffer = 256);
     ~QHarmonicProcessor();
     quint32 getDatalength() const;
     quint32 getBufferlength() const;

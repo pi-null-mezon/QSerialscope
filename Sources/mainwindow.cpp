@@ -18,11 +18,11 @@ MainWindow::MainWindow(QWidget *parent)
     pt_centralWidget->setLayout(pt_centralLayout);
 
     //Plot widges
-    pt_signalPlot = new QEasyPlot(this, tr("Counts"), tr("Amplitude, g.e."));
+    pt_signalPlot = new QEasyPlot(NULL, tr("Counts"), tr("Amplitude, g.e."));
+    pt_signalPlot->set_horizontal_Borders(0,100);
+    pt_signalPlot->set_vertical_Borders(0,16);
     pt_signalPlot->set_X_Ticks(11);
     pt_signalPlot->set_Y_Ticks(9);
-    pt_signalPlot->set_horizontal_Borders(0.0,100.0);
-    pt_signalPlot->set_vertical_Borders(0.0,256.0);
     pt_signalPlot->set_coordinatesPrecision(0,0);
     pt_centralLayout->addWidget(pt_signalPlot);
 
@@ -39,9 +39,6 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     closeSerialConnection();
-
-    pt_serialThread->quit();
-    pt_serialThread->wait();
 
     if(pt_harmonicProcessor)
     {
@@ -99,14 +96,7 @@ void MainWindow::_createMenus()
 void MainWindow::_createThreads()
 {
     //Serial processor
-    qRegisterMetaType<QSerialPort::SerialPortError>("QSerialPort::SerialPortError");
-    pt_serialProcessor = new QSerialProcessor(NULL);
-    pt_serialThread = new QThread(this);
-    pt_serialProcessor->moveToThread(pt_serialThread);
-    connect(this, SIGNAL(signalToOpenConnection()), pt_serialProcessor, SLOT(open()));
-    connect(this, SIGNAL(signalToCloseConnection()), pt_serialProcessor, SLOT(close()));
-    connect(pt_serialThread, SIGNAL(finished()), pt_serialProcessor, SLOT(deleteLater()));
-    pt_serialThread->start();
+    pt_serialProcessor = new QSerialProcessor(this);
 
     //Timer
     m_timer.setTimerType(Qt::PreciseTimer);
@@ -175,7 +165,8 @@ void MainWindow::openSerialConnection()
                 bytesNumber = QSerialProcessor::Two;
 
             pt_serialProcessor->initializeBuffer(tempLength, bytesNumber, m_transmissionDialog.getBitsOrder());
-            pt_signalPlot->set_vertical_Borders(0, (0x00001 << m_transmissionDialog.getBitsNumber()));
+            pt_signalPlot->set_vertical_Borders(0.0, (qreal)(0x00001 << m_transmissionDialog.getBitsNumber()));
+
 
             if(pt_serialProcessor->open())
             {
@@ -190,8 +181,8 @@ void MainWindow::openSerialConnection()
                 connect(pt_harmonicThread, SIGNAL(finished()), pt_harmonicProcessor, SLOT(deleteLater()));
                 connect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), pt_harmonicProcessor, SLOT(readData(const quint16*,quint16)));
                 connect(pt_harmonicProcessor, SIGNAL(dataUpdated(const qreal*,quint16)), pt_signalPlot, SLOT(set_externalArray(const qreal*,quint16)));
+                pt_harmonicThread->start();
             }
-            emit signalToOpenConnection();
             m_timer.start();
         }
     }
@@ -200,21 +191,21 @@ void MainWindow::openSerialConnection()
 void MainWindow::closeSerialConnection()
 {
     m_timer.stop();
-    emit signalToCloseConnection();
+    pt_serialProcessor->close();
 }
 
 void MainWindow::startRecord()
 {
     if(!m_outputfile.isOpen())
     {
-        QString str = QFileDialog::getOpenFileName(this, tr("Save file"), "/records/record_1.txt", tr("Text file(*.txt)"));
+        QString str = QFileDialog::getSaveFileName(this, tr("Save file"), "/records/record.txt", tr("Text file(*.txt)"));
         m_outputfile.setFileName(str);
         while(!m_outputfile.open(QFile::WriteOnly))
         {
             QMessageBox msg(QMessageBox::Warning, tr("Warning message"), tr("Can not save"), QMessageBox::Open | QMessageBox::Close, this);
             if(msg.exec() == QMessageBox::Open)
             {
-                str = QFileDialog::getOpenFileName(this, tr("Save file"), "/records/record_1.txt", tr("Text file(*.txt)"));
+                str = QFileDialog::getSaveFileName(this, tr("Save file"), "/records/record.txt", tr("Text file(*.txt)"));
                 m_outputfile.setFileName(str);
             }
             else
@@ -268,16 +259,20 @@ void MainWindow::adjustStrobe()
         l_groupbox.setMargin(7);
 
         QLabel label;
-        label.setFont(QFont("Tahoma", 24.0, QFont::DemiBold));
+        label.setFont(QFont("Tahoma", 16.0, QFont::DemiBold));
         label.setAlignment(Qt::AlignCenter);
+        label.setNum(pt_harmonicProcessor->getStrobe());
+        label.setFrameStyle(QLabel::Sunken | QLabel::Box);
         QDial dial;
         dial.setNotchesVisible(true);
         dial.setWrapping(false);
         dial.setMinimum(1);
-        dial.setMaximum(100);
+        dial.setMaximum(256);
         dial.setSingleStep(1);
-        connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));
+        dial.setFixedSize(64,64);
+        //dial.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         dial.setValue(pt_harmonicProcessor->getStrobe());
+        connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));            
         connect(&dial, &QDial::valueChanged, pt_harmonicProcessor, &QHarmonicProcessor::setStrobe);
 
         l_groupbox.addWidget(&dial);

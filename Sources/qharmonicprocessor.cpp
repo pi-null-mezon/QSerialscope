@@ -11,7 +11,7 @@ QHarmonicProcessor::QHarmonicProcessor(QObject *parent, quint16 length_of_data, 
                     m_curpos(0),
                     m_SNR(-5.0),
                     m_frequency(0.0),
-                    m_strobe(1),
+                    m_strobe(MIN_STROBE),
                     m_counter(0),
                     m_accumulator(0.0)
 {   
@@ -24,7 +24,7 @@ QHarmonicProcessor::QHarmonicProcessor(QObject *parent, quint16 length_of_data, 
 
     for (unsigned int i = 0; i < m_datalength; i++)
     {
-        v_RAW[i] = 10.0;
+        v_RAW[i] = i;
         v_Signal[i] = 0.0;
     }
 }
@@ -44,7 +44,8 @@ void QHarmonicProcessor::readData(const quint16 *v_data, quint16 data_length)
     for(quint16 i = 0; i < data_length; i++)
     {
         m_accumulator += v_data[i];
-        if( (m_counter++) == m_strobe )
+        m_counter++;
+        if( m_counter == m_strobe )
         {
             v_RAW[loop(m_curpos + records)] = m_accumulator / m_strobe;
             m_accumulator = 0.0;

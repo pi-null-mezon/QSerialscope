@@ -21,7 +21,7 @@ bool QSerialProcessor::showPortSelectDialog()
 {
     QDialog dialog;
     dialog.setWindowTitle(tr("SerialPort select"));
-    dialog.setFixedSize(196,128);
+    dialog.setFixedSize(196,118);
 
     QVBoxLayout layout;
 
@@ -84,10 +84,10 @@ bool QSerialProcessor::open()
             switch(m_bytesPerValue)
             {
                 case One:
-                    m_serialPort.setReadBufferSize(m_length);
+                    m_serialPort.setReadBufferSize( m_length );
                     break;
                 case Two:
-                    m_serialPort.setReadBufferSize(m_length*2);
+                    m_serialPort.setReadBufferSize( m_length * 2 );
                     break;
             }
             qWarning() << "current portBuffer size = " << m_serialPort.readBufferSize() << " bytes";
@@ -120,9 +120,9 @@ void QSerialProcessor::handleErrors(QSerialPort::SerialPortError code)
 void QSerialProcessor::readData()
 {
     m_data = m_serialPort.readAll();
-    qWarning() << "readyRead() signal has occured, the quantity of incoming bytes is: " << m_data.size();
+    qWarning() << "readyRead() signal has occured, the quantity of incoming bytes is: " << (quint8)m_data.size();
 
-    /*switch(m_bytesPerValue)
+    switch(m_bytesPerValue)
     {
         case One:
             convertOneByteData();
@@ -132,7 +132,7 @@ void QSerialProcessor::readData()
             break;
     }
 
-    emit dataUpdated(v_values, m_length);*/
+    emit dataUpdated(v_values, m_data.size());
 }
 
 void QSerialProcessor::initializeBuffer(quint16 length, BytesPerValue quantity, BitsOrder order)
@@ -142,17 +142,19 @@ void QSerialProcessor::initializeBuffer(quint16 length, BytesPerValue quantity, 
         delete[] v_values;
         v_values = NULL;
     }
+
     m_length = length;
+    v_values = new quint16[m_length];
+
     m_bytesPerValue = quantity;
     m_bytesOrder = order;
-    v_values = new quint16[m_length];
 }
 
 void QSerialProcessor::convertOneByteData()
 {
-    for(quint16 i = 0; i < m_length; i++)
+    for(int i = 0; i < m_data.size(); i++)
     {
-        v_values[i] = (quint16)m_data.at(i);
+        v_values[i] = 0x00FF & (quint16)m_data.at(i);
     }
 }
 
@@ -160,18 +162,18 @@ void QSerialProcessor::convertTwoByteData()
 {
     if(m_bytesOrder = LittleEndian)
     {
-        for(quint16 i = 0; i < m_length; i++)
+        for(int i = 0; i < m_data.size()/2; i++)
         {
-            v_values[i] = (quint16)m_data.at(i*2) << 8;
-            v_values[i] |= (quint16)m_data.at(i*2+1);
+            v_values[i] = (0x00FF & (quint16)m_data.at(i*2)) << 8;
+            v_values[i] |= 0x00FF & (quint16)m_data.at(i*2+1);
         }
     }
     else
     {
-        for(quint16 i = 0; i < m_length; i++)
+        for(int i = 0; i < m_data.size()/2; i++)
         {
-            v_values[i] = (quint16)m_data.at(i*2);
-            v_values[i] |= (quint16)m_data.at(i*2+1) << 8;
+            v_values[i] = 0x00FF & (quint16)m_data.at(i*2);
+            v_values[i] |= (0x00FF &(quint16)m_data.at(i*2+1)) << 8;
         }
     }
 }

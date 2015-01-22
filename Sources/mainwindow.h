@@ -44,10 +44,6 @@ public slots:
     void makeRecord(const quint16 *pointer, quint16 length); // Make record to output file
     void adjustStrobe();
 
-signals:
-    void signalToOpenConnection();
-    void signalToCloseConnection();
-
 protected:
     void contextMenuEvent(QContextMenuEvent *event);
 
@@ -68,7 +64,6 @@ private:
     QFile m_outputfile; 
     QSerialProcessor *pt_serialProcessor;
     QHarmonicProcessor *pt_harmonicProcessor;
-    QThread *pt_serialThread;
     QThread *pt_harmonicThread;
     QTransmissionDialog m_transmissionDialog;
 
