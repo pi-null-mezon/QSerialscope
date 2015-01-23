@@ -27,6 +27,7 @@ QHarmonicProcessor::QHarmonicProcessor(QObject *parent, quint16 length_of_data, 
         v_RAW[i] = i;
         v_Signal[i] = 0.0;
     }
+    plan = fftw_plan_dft_r2c_1d(m_bufferlength, v_DataForFFT, v_Spectrum, FFTW_ESTIMATE);
 }
 
 QHarmonicProcessor::~QHarmonicProcessor()
@@ -36,6 +37,7 @@ QHarmonicProcessor::~QHarmonicProcessor()
     delete[] v_DataForFFT;
     delete[] v_Amplitude;
     fftw_free(v_Spectrum);
+    fftw_destroy_plan(plan);
 }
 
 void QHarmonicProcessor::readData(const quint16 *v_data, quint16 data_length)
@@ -84,12 +86,10 @@ void QHarmonicProcessor::readData(const quint16 *v_data, quint16 data_length)
     }
 }
 
-qreal QHarmonicProcessor::computeFrequency()
+void QHarmonicProcessor::computeFrequency()
 {
     quint32 temp_m_curpos = m_curpos-1; // save current m_curpos
-    qreal buffer_duration = 0.0; // refresh data duration
-
-    fftw_plan p = fftw_plan_dft_r2c_1d(m_bufferlength, v_DataForFFT, v_Spectrum, FFTW_ESTIMATE);
+    qreal buffer_duration = m_bufferlength*m_discretizationPeriod*m_strobe; // refresh data duration
     //Data preparation
     quint32 position = 0;
     for (quint32 i = 0; i < m_bufferlength; i++)
@@ -97,7 +97,7 @@ qreal QHarmonicProcessor::computeFrequency()
         position = loop(temp_m_curpos - (m_bufferlength - 1) + i);
         v_DataForFFT[i] = v_Signal[ position ];
     }
-    fftw_execute(p);
+    fftw_execute(plan);
 
     for(quint16 i = 0; i < m_bufferlength/2 + 1; i++)
     {
@@ -110,7 +110,7 @@ qreal QHarmonicProcessor::computeFrequency()
     quint16 index_of_maxpower = 0;
     qreal maxpower = 0.0;
 
-    for (unsigned int i = ( lower_bound + HALF_INTERVAL ); i < ( (m_bufferlength / 2 + 1) - HALF_INTERVAL ); i++)
+    for (int i = ( lower_bound + HALF_INTERVAL ); i < ( (m_bufferlength / 2 + 1) - HALF_INTERVAL ); i++)
     {
         qreal temp_power = v_Amplitude[i];
         if ( maxpower < temp_power )
@@ -124,7 +124,7 @@ qreal QHarmonicProcessor::computeFrequency()
     qreal signal_power = 0.0;
     for (quint16 i = lower_bound; i < (m_bufferlength / 2 + 1); i++)
     {
-        if ( ( (i > (index_of_maxpower - HALF_INTERVAL )) && (i < (index_of_maxpower + HALF_INTERVAL) ) ) || ( (i > (2 * index_of_maxpower - HALF_INTERVAL )) && (i < (2 * index_of_maxpower + HALF_INTERVAL) ) ) )
+        if (  (i > (index_of_maxpower - HALF_INTERVAL)) && (i < (index_of_maxpower + HALF_INTERVAL)) )
         {
             signal_power += v_Amplitude[i];
         }
@@ -133,24 +133,25 @@ qreal QHarmonicProcessor::computeFrequency()
             noise_power += v_Amplitude[i];
         }
     }
-    if ((noise_power > 0.0) && (signal_power > 0.0))
+    m_SNR = 10 * log10( signal_power / noise_power );
+
+    qreal power_multiplyed_by_index = 0.0;
+    for (int i = (index_of_maxpower - HALF_INTERVAL + 1); i < (index_of_maxpower + HALF_INTERVAL); i++)
     {
-        m_SNR = 10 * log10( signal_power / noise_power );
-        if ( m_SNR > SNR_TRESHOLD )
-        {
-            qreal power_multiplyed_by_index = 0.0;
-            qreal power_of_first_harmonic = 0.0;
-            for (unsigned int i = (index_of_maxpower - HALF_INTERVAL + 1); i < (index_of_maxpower + HALF_INTERVAL); i++)
-            {
-                power_of_first_harmonic += v_Amplitude[i];
-                power_multiplyed_by_index += i * v_Amplitude[i];
-            }
-            m_frequency = (power_multiplyed_by_index / power_of_first_harmonic) * 60000 / buffer_duration;
-         }
-     }
-     fftw_destroy_plan(p);
-     emit frequencyUpdated(m_frequency, m_SNR);
-     return m_frequency;
+        power_multiplyed_by_index += i * v_Amplitude[i];
+    }
+    qreal index_of_mass_center = power_multiplyed_by_index / signal_power;
+    m_SNR *= 1/(1 + (index_of_maxpower - index_of_mass_center)*(index_of_maxpower - index_of_mass_center));
+
+    if(m_SNR >= SNR_TRESHOLD)
+    {
+        m_frequency = index_of_mass_center * 60000 / buffer_duration;
+        emit frequencyUpdated(m_frequency, m_SNR);
+    }
+    else
+    {
+        emit tooNoisy(m_SNR);
+    }
 }
 
 quint32 QHarmonicProcessor::getDatalength() const
@@ -165,9 +166,9 @@ quint32 QHarmonicProcessor::getBufferlength() const
 
 void QHarmonicProcessor::setStrobe(int value)
 {
-    if(value > 0)
+    if((value > 0) && (value <= MAX_STROBE))
     {
-        m_strobe = value;
+        m_strobe = (quint8)value;
     }
     else
     {
@@ -178,4 +179,9 @@ void QHarmonicProcessor::setStrobe(int value)
 quint16 QHarmonicProcessor::getStrobe() const
 {
     return m_strobe;
+}
+
+void QHarmonicProcessor::setDiscretizationPeriod(qreal value) // in ms
+{
+    m_discretizationPeriod = value;
 }

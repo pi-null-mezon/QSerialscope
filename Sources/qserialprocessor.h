@@ -17,7 +17,7 @@ class QSerialProcessor : public QObject
 {
     Q_OBJECT
 public:
-    explicit QSerialProcessor(QObject *parent = 0);
+    explicit QSerialProcessor(QObject *parent = 0, quint16 bufferLength = 256);
     ~QSerialProcessor();
     enum BytesPerValue {One, Two};
     enum BitsOrder {LittleEndian, BigEndian};
@@ -31,14 +31,14 @@ public slots:
     bool showPortSelectDialog();
     void handleErrors(QSerialPort::SerialPortError code);
     void readData();
-    void initializeBuffer(quint16 length, BytesPerValue quantity, BitsOrder order);
+    void setDataFormat(BytesPerValue perValue, BitsOrder order);
 
 private:
     QSerialPort m_serialPort;
     QSerialPortInfo m_serialInfo;
-    QByteArray m_data;
-    quint16 *v_values;
-    quint16 m_length;
+    QByteArray m_dataBuffer;
+    quint16 m_bufferLength;
+    quint16 *v_signalCounts;
     BytesPerValue m_bytesPerValue;
     BitsOrder m_bytesOrder;
 

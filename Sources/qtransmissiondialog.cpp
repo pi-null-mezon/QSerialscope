@@ -1,7 +1,8 @@
 #include "qtransmissiondialog.h"
 #include "ui_qtransmissiondialog.h"
 
-#define TIME_STEP 0.01// in ms
+#define TIME_STEP 0.001 // in ms
+#define VOLTAGE_STEP 0.1 // in V
 
 #include "qserialprocessor.h"
 
@@ -35,6 +36,11 @@ void QTransmissionDialog::on_pushButton_clicked()
     if(bits < 16)
     {
         bits++;
+        if(bits > 8)
+        {
+            ui->RBbigendian->setEnabled(true);
+            ui->RBlittleendian->setEnabled(true);
+        }
     }
     ui->Ebits->setText(QString::number(bits));
 }
@@ -45,18 +51,18 @@ void QTransmissionDialog::on_pushButton_2_clicked()
     if(bits > 1)
     {
         bits--;
+        if(bits < 8)
+        {
+            ui->RBbigendian->setEnabled(false);
+            ui->RBlittleendian->setEnabled(false);
+        }
     }
     ui->Ebits->setText(QString::number(bits));
 }
 
 void QTransmissionDialog::on_Ddiscretization_valueChanged(int value)
 {
-    ui->Ediscretization->setText( QString::number(value * TIME_STEP,'f') );
-}
-
-void QTransmissionDialog::on_Dtime_valueChanged(int value)
-{
-    ui->Etime->setText( QString::number(value * TIME_STEP * 100 , 'f') );
+    ui->Ediscretization->setText( QString::number(value * TIME_STEP,'f' ,3) );
 }
 
 QSerialProcessor::BitsOrder QTransmissionDialog::getBitsOrder() const
@@ -72,9 +78,9 @@ qreal QTransmissionDialog::getDiscretizationPeriod() const
     return ui->Ediscretization->text().toDouble();
 }
 
-qreal QTransmissionDialog::getOveralTime() const
+qreal QTransmissionDialog::getReferenceVoltage() const
 {
-    return ui->Etime->text().toDouble();
+    return ui->Evoltage->text().toDouble();
 }
 
 uint QTransmissionDialog::getBitsNumber() const
@@ -87,6 +93,12 @@ void QTransmissionDialog::on_Bdefault_clicked()
     ui->RBlittleendian->setChecked(true);
     ui->RBbigendian->setChecked(false);
     ui->Ediscretization->setText("1.0");
-    ui->Etime->setText("100.0");
     ui->Ebits->setText("8");
+    ui->RBbigendian->setEnabled(false);
+    ui->RBlittleendian->setEnabled(false);
+}
+
+void QTransmissionDialog::on_Dvoltage_valueChanged(int value)
+{
+    ui->Evoltage->setText(QString::number(value * VOLTAGE_STEP));
 }

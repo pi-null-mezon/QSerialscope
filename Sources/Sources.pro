@@ -12,7 +12,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 #------------------App Info-----------------------
 TEMPLATE = app
-TARGET = QVASS
+TARGET = adc2pc
 VERSION = 1.0.0.0
 DEFINES +=  APP_NAME=\\\"$${TARGET}\\\" \
             APP_VERSION=\\\"$${VERSION}\\\"
@@ -35,7 +35,7 @@ include(FFTW.pri)
 include(QEasyPlot.pri)
 
 #--------------------CONFIG------------------------
-#RC_ICONS = $$PWD/../Resources/Images/App_ico.ico
+RC_ICONS = $$PWD/../Resources/adc2pc.ico
 CONFIG(release, debug|release): DEFINES += QT_NO_WARNING_OUTPUT
 win32-g++: DEFINES += MINGW_COMPILER
 

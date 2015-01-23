@@ -43,6 +43,9 @@ public slots:
     void startRecord();             // Open dialog to choose output file name
     void makeRecord(const quint16 *pointer, quint16 length); // Make record to output file
     void adjustStrobe();
+    void regimeDialog();
+    void frequencyInStatusBar(qreal freq, qreal snr);
+    void warningInStatusBar(qreal snr);
 
 protected:
     void contextMenuEvent(QContextMenuEvent *event);
@@ -66,6 +69,12 @@ private:
     QHarmonicProcessor *pt_harmonicProcessor;
     QThread *pt_harmonicThread;
     QTransmissionDialog m_transmissionDialog;
+
+    QAction *pt_backgroundColorAct;
+    QAction *pt_traceColorAct;
+    QAction *pt_fontAct;
+    QAction *pt_coordinateColorAct;
+    QMenu *pt_appearenceMenu;
 
     void _createActions();
     void _createMenus();

@@ -77,6 +77,23 @@ void MainWindow::_createActions()
     pt_strobeAction->setStatusTip(tr("Open strobe adjustment dialog"));
     pt_strobeAction->setShortcut(QKeySequence(tr("Alt+A")));
     connect(pt_strobeAction, SIGNAL(triggered()), this, SLOT(adjustStrobe()));
+
+    pt_backgroundColorAct = new QAction(tr("&Background"), this);
+    pt_backgroundColorAct->setStatusTip(tr("Select color for background"));
+    connect(pt_backgroundColorAct, SIGNAL(triggered()), pt_signalPlot, SLOT(open_backgroundColorDialog()));
+
+    pt_traceColorAct = new QAction(tr("&Trace"), this);
+    pt_traceColorAct->setStatusTip(tr("Select color for trace"));
+    connect(pt_traceColorAct, SIGNAL(triggered()), pt_signalPlot, SLOT(open_traceColorDialog()));
+
+    pt_fontAct = new QAction(tr("&Font"), this);
+    pt_fontAct->setStatusTip(tr("Select font"));
+    connect(pt_fontAct, SIGNAL(triggered()), pt_signalPlot, SLOT(open_fontSelectDialog()));
+
+    pt_coordinateColorAct = new QAction(tr("&Background"), this);
+    pt_coordinateColorAct->setStatusTip(tr("Select color for coordinate axis"));
+    connect(pt_coordinateColorAct, SIGNAL(triggered()), pt_signalPlot, SLOT(open_coordinatesystemColorDialog()));
+
 }
 
 void MainWindow::_createMenus()
@@ -89,6 +106,13 @@ void MainWindow::_createMenus()
     pt_controlMenu->addAction(pt_strobeAction);
     pt_controlMenu->addSeparator();
     pt_controlMenu->addAction(pt_exitAction);
+
+    pt_appearenceMenu = this->menuBar()->addMenu(tr("&Appearence"));
+    pt_appearenceMenu->addAction(pt_backgroundColorAct);
+    pt_appearenceMenu->addAction(pt_coordinateColorAct);
+    pt_appearenceMenu->addAction(pt_traceColorAct);
+    pt_appearenceMenu->addAction(pt_fontAct);
+
     pt_helpMenu = this->menuBar()->addMenu(tr("&Help"));
     pt_helpMenu->addAction(pt_aboutAction);
 }
@@ -100,7 +124,7 @@ void MainWindow::_createThreads()
 
     //Timer
     m_timer.setTimerType(Qt::PreciseTimer);
-    m_timer.setInterval(1000);
+    m_timer.setInterval(2000);
 
     //Harmonic processor
     pt_harmonicProcessor = NULL;
@@ -159,14 +183,14 @@ void MainWindow::openSerialConnection()
     {
         if(m_transmissionDialog.exec() == QDialog::Accepted)
         {
-            quint16 tempLength = m_transmissionDialog.getOveralTime()/m_transmissionDialog.getDiscretizationPeriod();
-            QSerialProcessor::BytesPerValue bytesNumber = QSerialProcessor::One;
+            QSerialProcessor::BytesPerValue bytesNumber;
             if(m_transmissionDialog.getBitsNumber() > 8)
                 bytesNumber = QSerialProcessor::Two;
+            else
+                bytesNumber = QSerialProcessor::One;
 
-            pt_serialProcessor->initializeBuffer(tempLength, bytesNumber, m_transmissionDialog.getBitsOrder());
+            pt_serialProcessor->setDataFormat(bytesNumber, m_transmissionDialog.getBitsOrder());
             pt_signalPlot->set_vertical_Borders(0.0, (qreal)(0x00001 << m_transmissionDialog.getBitsNumber()));
-
 
             if(pt_serialProcessor->open())
             {
@@ -178,9 +202,13 @@ void MainWindow::openSerialConnection()
 
                 pt_harmonicProcessor = new QHarmonicProcessor();
                 pt_harmonicProcessor->moveToThread(pt_harmonicThread);
+                pt_harmonicProcessor->setDiscretizationPeriod(m_transmissionDialog.getDiscretizationPeriod());
                 connect(pt_harmonicThread, SIGNAL(finished()), pt_harmonicProcessor, SLOT(deleteLater()));
                 connect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), pt_harmonicProcessor, SLOT(readData(const quint16*,quint16)));
                 connect(pt_harmonicProcessor, SIGNAL(dataUpdated(const qreal*,quint16)), pt_signalPlot, SLOT(set_externalArray(const qreal*,quint16)));
+                connect(&m_timer, SIGNAL(timeout()), pt_harmonicProcessor, SLOT(computeFrequency()));
+                connect(pt_harmonicProcessor, SIGNAL(frequencyUpdated(qreal,qreal)), this, SLOT(frequencyInStatusBar(qreal,qreal)));
+                connect(pt_harmonicProcessor, SIGNAL(tooNoisy(qreal)), this, SLOT(warningInStatusBar(qreal)));
                 pt_harmonicThread->start();
             }
             m_timer.start();
@@ -218,9 +246,10 @@ void MainWindow::startRecord()
         {
             m_textstream.setDevice(&m_outputfile);
             m_textstream << QString(APP_NAME) + " output record\n"
-                         << "Record was started at " + QDateTime::currentDateTime().toString("dd.MM.yyy hh.mm.ss") + "\n"
+                         << "Record was started at " + QDateTime::currentDateTime().toString("dd.MM.yyyy hh.mm.ss") + "\n"
                          << "discretization period: " << QString::number(m_transmissionDialog.getDiscretizationPeriod(), 'f', 3)
-                         << " ms , gen.unit: 5.0 / " << QString::number( (0x00001 << m_transmissionDialog.getBitsNumber()))
+                         << " ms , gen.unit: " << QString::number(m_transmissionDialog.getReferenceVoltage(), 'f', 2)
+                         << "/" << QString::number( (0x00001 << m_transmissionDialog.getBitsNumber()))
                          << " V\nValue, gen.unit\n";
             connect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), this, SLOT(makeRecord(const quint16*,quint16)));
             pt_recordAction->setChecked(true);
@@ -249,7 +278,7 @@ void MainWindow::adjustStrobe()
     {
         QDialog dialog;
         dialog.setWindowTitle(tr("Strobe dialog"));
-        dialog.setFixedSize(196,128);
+        dialog.setFixedSize(196,100);
 
         QHBoxLayout layout;
         layout.setMargin(7);
@@ -266,8 +295,8 @@ void MainWindow::adjustStrobe()
         QDial dial;
         dial.setNotchesVisible(true);
         dial.setWrapping(false);
-        dial.setMinimum(1);
-        dial.setMaximum(256);
+        dial.setMinimum(MIN_STROBE);
+        dial.setMaximum(MAX_STROBE);
         dial.setSingleStep(1);
         dial.setFixedSize(64,64);
         //dial.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -289,4 +318,19 @@ void MainWindow::adjustStrobe()
         QMessageBox msgBox(QMessageBox::Information, this->windowTitle(), tr("Nothing to strobe"), QMessageBox::Ok, this, Qt::Dialog);
         msgBox.exec();
     }
+}
+
+void MainWindow::frequencyInStatusBar(qreal freq, qreal snr)
+{
+    statusBar()->showMessage("Pulse harmonic frequency: " + QString::number(freq, 'f', 1) + " bpm, snr: " + QString::number(snr, 'f', 2) + " db");
+}
+
+void MainWindow::warningInStatusBar(qreal snr)
+{
+    statusBar()->showMessage("Too noisy, snr: " + QString::number(snr, 'f', 2) + " db");
+}
+
+void MainWindow::regimeDialog()
+{
+
 }

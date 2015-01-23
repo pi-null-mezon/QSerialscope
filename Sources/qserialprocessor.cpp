@@ -1,11 +1,14 @@
 #include "qserialprocessor.h"
 
 
-QSerialProcessor::QSerialProcessor(QObject *parent) :
+QSerialProcessor::QSerialProcessor(QObject *parent, quint16 bufferLength) :
     QObject(parent),
-    m_length(0),
-    v_values(NULL)
+    m_bytesOrder(LittleEndian),
+    m_bytesPerValue(One)
 {
+    m_bufferLength = bufferLength;
+    v_signalCounts = new quint16[bufferLength];
+
     connect(&m_serialPort, SIGNAL(readyRead()), this, SLOT(readData()));
     connect(&m_serialPort, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(handleErrors(QSerialPort::SerialPortError)));
 }
@@ -13,8 +16,7 @@ QSerialProcessor::QSerialProcessor(QObject *parent) :
 QSerialProcessor::~QSerialProcessor()
 {
     close(); // close serial communication
-
-    delete[] v_values;
+    delete[] v_signalCounts;
 }
 
 bool QSerialProcessor::showPortSelectDialog()
@@ -75,22 +77,14 @@ bool QSerialProcessor::open()
             && m_serialPort.setStopBits(QSerialPort::OneStop)
             &&*/ m_serialPort.setDataTerminalReady(QSerialPort::IgnorePolicy) ) // Qt 5.2.1 says that QSerialPort::IgnorePolicy is obsolete, but without this property explicit set, the transmission will not start...
         {
-            qWarning() << "current portName = " << m_serialPort.portName();
-            qWarning() << "current baudRate = " << m_serialPort.baudRate() << " bps";
-            qWarning() << "current dataBits = " << m_serialPort.dataBits() << " bit";
-            qWarning() << "current flowControl = " << m_serialPort.flowControl();
-            qWarning() << "current parity = " << m_serialPort.parity();
-            qWarning() << "current stopBits = " << m_serialPort.stopBits();            
-            switch(m_bytesPerValue)
-            {
-                case One:
-                    m_serialPort.setReadBufferSize( m_length );
-                    break;
-                case Two:
-                    m_serialPort.setReadBufferSize( m_length * 2 );
-                    break;
-            }
-            qWarning() << "current portBuffer size = " << m_serialPort.readBufferSize() << " bytes";
+            m_serialPort.setReadBufferSize( m_bufferLength );
+            qWarning() << "portName = " << m_serialPort.portName();
+            qWarning() << "baudRate = " << m_serialPort.baudRate() << " bps";
+            qWarning() << "dataBits = " << m_serialPort.dataBits() << " bit";
+            qWarning() << "flowControl = " << m_serialPort.flowControl();
+            qWarning() << "parity = " << m_serialPort.parity();
+            qWarning() << "stopBits = " << m_serialPort.stopBits();
+            qWarning() << "readBufferSize = " << m_serialPort.readBufferSize() << " bytes";
         }
         else
         {
@@ -119,9 +113,8 @@ void QSerialProcessor::handleErrors(QSerialPort::SerialPortError code)
 
 void QSerialProcessor::readData()
 {
-    m_data = m_serialPort.readAll();
-    qWarning() << "readyRead() signal has occured, the quantity of incoming bytes is: " << (quint8)m_data.size();
-
+    m_dataBuffer = m_serialPort.readAll();
+    qWarning() << "readyRead() signal has occured, the quantity of incoming bytes is: " << (quint8)m_dataBuffer.size();
     switch(m_bytesPerValue)
     {
         case One:
@@ -131,50 +124,58 @@ void QSerialProcessor::readData()
             convertTwoByteData();
             break;
     }
-
-    emit dataUpdated(v_values, m_data.size());
 }
 
-void QSerialProcessor::initializeBuffer(quint16 length, BytesPerValue quantity, BitsOrder order)
+void QSerialProcessor::setDataFormat(BytesPerValue perValue, BitsOrder order)
 {
-    if(v_values)
-    {
-        delete[] v_values;
-        v_values = NULL;
-    }
-
-    m_length = length;
-    v_values = new quint16[m_length];
-
-    m_bytesPerValue = quantity;
+    m_bytesPerValue = perValue;
     m_bytesOrder = order;
 }
 
 void QSerialProcessor::convertOneByteData()
 {
-    for(int i = 0; i < m_data.size(); i++)
+    for(int i = 0; i < m_dataBuffer.size(); i++)
     {
-        v_values[i] = 0x00FF & (quint16)m_data.at(i);
+        v_signalCounts[i] = 0x00FF & (quint16)m_dataBuffer.at(i);
     }
+    emit dataUpdated(v_signalCounts, m_dataBuffer.size());
 }
 
 void QSerialProcessor::convertTwoByteData()
 {
-    if(m_bytesOrder = LittleEndian)
+    /* Note that in case of Two bytes per value format
+     * application waits following format of byte flow:
+     * ...(0xFF)(0xXX)(0xXX)(0xFF)(0xXX)(0xXX)...
+     * where 0xFF is used as format pointer         */
+
+    quint8 shift = 0; // initial shift of data bytes in incoming flow
+    if(m_dataBuffer.size() > 5)
     {
-        for(int i = 0; i < m_data.size()/2; i++)
+        if((0xFF & m_dataBuffer.at(0) & m_dataBuffer.at(3)) == 0xFF)
+            shift = 1;
+        else if((0xFF & m_dataBuffer.at(1) & m_dataBuffer.at(4)) == 0xFF)
+            shift = 2;
+
+        int position;
+        if(m_bytesOrder == LittleEndian)
         {
-            v_values[i] = (0x00FF & (quint16)m_data.at(i*2)) << 8;
-            v_values[i] |= 0x00FF & (quint16)m_data.at(i*2+1);
+            for(int i = 0; (i * 3 + shift + 1) < m_dataBuffer.size(); i++)
+            {
+                position = i * 3 + shift;
+                v_signalCounts[i] = (0x00FF & (quint16)m_dataBuffer.at( position )) << 8;
+                v_signalCounts[i] |= 0x00FF & (quint16)m_dataBuffer.at( position + 1 );
+            }
         }
-    }
-    else
-    {
-        for(int i = 0; i < m_data.size()/2; i++)
+        else // m_bytesOrder == BigEndian
         {
-            v_values[i] = 0x00FF & (quint16)m_data.at(i*2);
-            v_values[i] |= (0x00FF &(quint16)m_data.at(i*2+1)) << 8;
+            for(int i = 0; (i * 3 + shift + 1) < m_dataBuffer.size(); i++)
+            {
+                position = i * 3 + shift;
+                v_signalCounts[i] = 0x00FF & (quint16)m_dataBuffer.at( position );
+                v_signalCounts[i] |= (0x00FF &(quint16)m_dataBuffer.at( position + 1 )) << 8;
+            }
         }
+        emit dataUpdated(v_signalCounts, m_dataBuffer.size()/3);
     }
 }
 

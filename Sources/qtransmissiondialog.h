@@ -18,9 +18,9 @@ public:
 
 public slots:
     QSerialProcessor::BitsOrder getBitsOrder() const;
-    qreal getDiscretizationPeriod() const;
-    qreal getOveralTime() const;
     uint getBitsNumber() const;
+    qreal getDiscretizationPeriod() const;
+    qreal getReferenceVoltage() const;
 
 private slots:
     void on_RBlittleendian_clicked();
@@ -33,9 +33,9 @@ private slots:
 
     void on_Ddiscretization_valueChanged(int value);
 
-    void on_Dtime_valueChanged(int value);
-
     void on_Bdefault_clicked();
+
+    void on_Dvoltage_valueChanged(int value);
 
 private:
     Ui::QTransmissionDialog *ui;
