@@ -51,7 +51,7 @@ void QTransmissionDialog::on_pushButton_2_clicked()
     if(bits > 1)
     {
         bits--;
-        if(bits < 8)
+        if(bits < 9)
         {
             ui->RBbigendian->setEnabled(false);
             ui->RBlittleendian->setEnabled(false);

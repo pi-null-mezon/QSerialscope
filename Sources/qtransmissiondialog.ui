@@ -55,7 +55,7 @@
       </sizepolicy>
      </property>
      <property name="title">
-      <string>Adjust following characteristics</string>
+      <string>Adjust capturing characteristics</string>
      </property>
      <widget class="QLineEdit" name="Ediscretization">
       <property name="geometry">

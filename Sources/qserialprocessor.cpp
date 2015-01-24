@@ -5,6 +5,7 @@ QSerialProcessor::QSerialProcessor(QObject *parent, quint16 bufferLength) :
     QObject(parent),
     m_bytesOrder(LittleEndian),
     m_bytesPerValue(One)
+
 {
     m_bufferLength = bufferLength;
     v_signalCounts = new quint16[bufferLength];
@@ -149,11 +150,11 @@ void QSerialProcessor::convertTwoByteData()
      * where 0xFF is used as format pointer         */
 
     quint8 shift = 0; // initial shift of data bytes in incoming flow
-    if(m_dataBuffer.size() > 5)
+    if(m_dataBuffer.size() > 4)
     {
-        if((0xFF & m_dataBuffer.at(0) & m_dataBuffer.at(3)) == 0xFF)
+        if(((quint8)m_dataBuffer.at(0) & (quint8)m_dataBuffer.at(3)) == 0xFF)
             shift = 1;
-        else if((0xFF & m_dataBuffer.at(1) & m_dataBuffer.at(4)) == 0xFF)
+        else if(((quint8)m_dataBuffer.at(1) & (quint8)m_dataBuffer.at(4)) == 0xFF)
             shift = 2;
 
         int position;
@@ -175,7 +176,7 @@ void QSerialProcessor::convertTwoByteData()
                 v_signalCounts[i] |= (0x00FF &(quint16)m_dataBuffer.at( position + 1 )) << 8;
             }
         }
-        emit dataUpdated(v_signalCounts, m_dataBuffer.size()/3);
+        emit dataUpdated(v_signalCounts, (position - shift)/3);
     }
 }
 

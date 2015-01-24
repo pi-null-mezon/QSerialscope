@@ -22,13 +22,13 @@ SOURCES +=  main.cpp\
             mainwindow.cpp \
             qserialprocessor.cpp \
             qharmonicprocessor.cpp \
-    qtransmissiondialog.cpp
+            qtransmissiondialog.cpp
 
 HEADERS  += mainwindow.h \
             about.h \
             qserialprocessor.h \
             qharmonicprocessor.h \
-    qtransmissiondialog.h
+            qtransmissiondialog.h
 
 #------------------3rd parties---------------------
 include(FFTW.pri)

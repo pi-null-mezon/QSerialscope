@@ -11,9 +11,10 @@
 #include "fftw3.h"
 
 //---------------------------------------------------------------------------
-#define LOWER_HR_LIMIT 0.8  // in s^-1, it is 48 bpm
-#define SNR_TRESHOLD 1.0
-#define HALF_INTERVAL 5     // defines the number of averaging indexes when frequency is evaluated, this value should be >= 1
+#define BOTTOM_HR_LIMIT 0.5  // in s^-1, it is 30 bpm
+#define TOP_HR_LIMIT 3.0    // in s^-1, it is 180 bpm
+#define SNR_TRESHOLD 0.5
+#define HALF_INTERVAL 3     // defines the number of averaging indexes when frequency is evaluated, this value should be >= 1
 #define MIN_STROBE 1        // defines the min value of the m_strobe (how much raw counts represents one count in output data, in another words it is frequency divider)
 #define MAX_STROBE 255      // because m_strobe is quint8 type
 //---------------------------------------------------------------------------

@@ -13,12 +13,12 @@ MainWindow::MainWindow(QWidget *parent)
     //Central widget
     pt_centralWidget = new QWidget();
     this->setCentralWidget( pt_centralWidget );
-    pt_centralLayout = new QVBoxLayout();
+    pt_centralLayout = new QHBoxLayout();
     pt_centralLayout->setMargin(5);
     pt_centralWidget->setLayout(pt_centralLayout);
 
     //Plot widges
-    pt_signalPlot = new QEasyPlot(NULL, tr("Counts"), tr("Amplitude, g.e."));
+    pt_signalPlot = new QEasyPlot(NULL, tr("Count index"), tr("Amplitude"));
     pt_signalPlot->set_horizontal_Borders(0,100);
     pt_signalPlot->set_vertical_Borders(0,16);
     pt_signalPlot->set_X_Ticks(11);
@@ -26,13 +26,18 @@ MainWindow::MainWindow(QWidget *parent)
     pt_signalPlot->set_coordinatesPrecision(0,0);
     pt_centralLayout->addWidget(pt_signalPlot);
 
+    _createSpectrumPlot();
+    _createCNSignalPlot();
+
     //Initialization
     _createActions();
     _createMenus();
     _createThreads();
 
+
     //Resize
     this->resize(WINDOW_WIDTH, WINDOW_HEIGHT);
+    statusBar()->addWidget(&m_infoLabel);
     this->statusBar()->showMessage(tr("Context menu available on right click"));
 }
 
@@ -45,6 +50,8 @@ MainWindow::~MainWindow()
         pt_harmonicThread->quit();
         pt_harmonicThread->wait();
     }
+
+    delete pt_spectrumPlot;
 }
 
 void MainWindow::_createActions()
@@ -90,9 +97,21 @@ void MainWindow::_createActions()
     pt_fontAct->setStatusTip(tr("Select font"));
     connect(pt_fontAct, SIGNAL(triggered()), pt_signalPlot, SLOT(open_fontSelectDialog()));
 
-    pt_coordinateColorAct = new QAction(tr("&Background"), this);
+    pt_coordinateColorAct = new QAction(tr("&Coordinates"), this);
     pt_coordinateColorAct->setStatusTip(tr("Select color for coordinate axis"));
     connect(pt_coordinateColorAct, SIGNAL(triggered()), pt_signalPlot, SLOT(open_coordinatesystemColorDialog()));
+
+    pt_spectrumAct = new QAction(tr("&Spectrum"), this);
+    pt_spectrumAct->setStatusTip(tr("Show power spectrum in new window"));
+    connect(pt_spectrumAct, SIGNAL(triggered()), pt_spectrumPlot, SLOT(show()));
+    pt_cnsignalAct = new QAction(tr("&CNsignal"), this);
+    pt_cnsignalAct->setStatusTip(tr("Show centered and normalized signal in new window"));
+    connect(pt_cnsignalAct, SIGNAL(triggered()), pt_cnsignalPlot, SLOT(show()));
+
+    pt_timerAct = new QAction(tr("&Timer"), this);
+    pt_timerAct->setStatusTip(tr("Adjust time interval between successive spectrum evaluations"));
+    pt_timerAct->setShortcut(QKeySequence(tr("Alt+T")));
+    connect(pt_timerAct, SIGNAL(triggered()), this, SLOT(adjustTimer()));
 
 }
 
@@ -104,6 +123,7 @@ void MainWindow::_createMenus()
     pt_controlMenu->addSeparator();
     pt_controlMenu->addAction(pt_recordAction);
     pt_controlMenu->addAction(pt_strobeAction);
+    pt_controlMenu->addAction(pt_timerAct);
     pt_controlMenu->addSeparator();
     pt_controlMenu->addAction(pt_exitAction);
 
@@ -112,6 +132,11 @@ void MainWindow::_createMenus()
     pt_appearenceMenu->addAction(pt_coordinateColorAct);
     pt_appearenceMenu->addAction(pt_traceColorAct);
     pt_appearenceMenu->addAction(pt_fontAct);
+
+    pt_windowsMenu = this->menuBar()->addMenu(tr("&Plots"));
+    pt_windowsMenu->addAction(pt_cnsignalAct);
+    pt_windowsMenu->addAction(pt_spectrumAct);
+
 
     pt_helpMenu = this->menuBar()->addMenu(tr("&Help"));
     pt_helpMenu->addAction(pt_aboutAction);
@@ -124,7 +149,7 @@ void MainWindow::_createThreads()
 
     //Timer
     m_timer.setTimerType(Qt::PreciseTimer);
-    m_timer.setInterval(2000);
+    m_timer.setInterval(1000);
 
     //Harmonic processor
     pt_harmonicProcessor = NULL;
@@ -138,6 +163,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event)
     menu.addAction(pt_stopAction);
     menu.addSeparator();
     menu.addAction(pt_strobeAction);
+    menu.addAction(pt_timerAct);
     menu.exec(event->globalPos());
 }
 
@@ -191,6 +217,7 @@ void MainWindow::openSerialConnection()
 
             pt_serialProcessor->setDataFormat(bytesNumber, m_transmissionDialog.getBitsOrder());
             pt_signalPlot->set_vertical_Borders(0.0, (qreal)(0x00001 << m_transmissionDialog.getBitsNumber()));
+            pt_signalPlot->set_axis_names(tr("Count index"), "Voltage, " + QString::number( m_transmissionDialog.getReferenceVoltage()/(0x00001 << m_transmissionDialog.getBitsNumber()),'f', 6) + " V per unit");
 
             if(pt_serialProcessor->open())
             {
@@ -209,6 +236,8 @@ void MainWindow::openSerialConnection()
                 connect(&m_timer, SIGNAL(timeout()), pt_harmonicProcessor, SLOT(computeFrequency()));
                 connect(pt_harmonicProcessor, SIGNAL(frequencyUpdated(qreal,qreal)), this, SLOT(frequencyInStatusBar(qreal,qreal)));
                 connect(pt_harmonicProcessor, SIGNAL(tooNoisy(qreal)), this, SLOT(warningInStatusBar(qreal)));
+                connect(pt_harmonicProcessor, SIGNAL(spectrumUpdated(const qreal*,quint16)), pt_spectrumPlot, SLOT(set_externalArray(const qreal*,quint16)));
+                connect(pt_harmonicProcessor, SIGNAL(signalUpdated(const qreal*,quint16)), pt_cnsignalPlot, SLOT(set_externalArray(const qreal*,quint16)));
                 pt_harmonicThread->start();
             }
             m_timer.start();
@@ -288,7 +317,7 @@ void MainWindow::adjustStrobe()
         l_groupbox.setMargin(7);
 
         QLabel label;
-        label.setFont(QFont("Tahoma", 16.0, QFont::DemiBold));
+        label.setFont(QFont("MS Shell Dlg", 14.0, QFont::DemiBold));
         label.setAlignment(Qt::AlignCenter);
         label.setNum(pt_harmonicProcessor->getStrobe());
         label.setFrameStyle(QLabel::Sunken | QLabel::Box);
@@ -322,15 +351,110 @@ void MainWindow::adjustStrobe()
 
 void MainWindow::frequencyInStatusBar(qreal freq, qreal snr)
 {
-    statusBar()->showMessage("Pulse harmonic frequency: " + QString::number(freq, 'f', 1) + " bpm, snr: " + QString::number(snr, 'f', 2) + " db");
+    m_infoLabel.setText("Pulse harmonic frequency: " + QString::number(freq, 'f', 1) + " bpm, snr: " + QString::number(snr, 'f', 2) + " db");
 }
 
 void MainWindow::warningInStatusBar(qreal snr)
 {
-    statusBar()->showMessage("Too noisy, snr: " + QString::number(snr, 'f', 2) + " db");
+    m_infoLabel.setText("Too noisy or more than one dominate harmonic, snr: " + QString::number(snr, 'f', 2) + " db");
 }
 
-void MainWindow::regimeDialog()
+void MainWindow::_createSpectrumPlot()
 {
+    pt_spectrumPlot = new QEasyPlot(NULL,tr("Harmonic count"), tr("Normalized harmonic power, g.e."));
+    pt_spectrumPlot->setWindowFlags(Qt::Window);
+    pt_spectrumPlot->setContextMenuPolicy(Qt::ActionsContextMenu);
+    pt_spectrumPlot->set_coordinatesPrecision(0,3);
+    pt_spectrumPlot->set_vertical_Borders(0.0,1.0);
+    pt_spectrumPlot->set_horizontal_Borders(0, 100);
+    pt_spectrumPlot->set_DrawRegime(QEasyPlot::FilledTraceRegime);
+    pt_spectrumPlot->set_tracePen(QPen(QBrush(Qt::Dense5Pattern),1.0), QColor(255,0,0));
 
+    //----------------------------------Actions----------------------------------
+    QAction *pt_spBackgroundAct = new QAction(tr("&BG_color"),pt_spectrumPlot);
+    connect(pt_spBackgroundAct,SIGNAL(triggered()), pt_spectrumPlot, SLOT(open_backgroundColorDialog()));
+    QAction *pt_spCoordinateColorAct = new QAction(tr("&CS_color"),pt_spectrumPlot);
+    connect(pt_spCoordinateColorAct,SIGNAL(triggered()), pt_spectrumPlot, SLOT(open_coordinatesystemColorDialog()));
+    QAction *pt_spTraceColorAct = new QAction(tr("&TC_color"),pt_spectrumPlot);
+    connect(pt_spTraceColorAct,SIGNAL(triggered()), pt_spectrumPlot, SLOT(open_traceColorDialog()));
+    QAction *pt_spFontAct = new QAction(tr("&CS_font"),pt_spectrumPlot);
+    connect(pt_spFontAct,SIGNAL(triggered()), pt_spectrumPlot, SLOT(open_fontSelectDialog()));
+    pt_spectrumPlot->addAction(pt_spBackgroundAct);
+    pt_spectrumPlot->addAction(pt_spCoordinateColorAct);
+    pt_spectrumPlot->addAction(pt_spTraceColorAct);
+    pt_spectrumPlot->addAction(pt_spFontAct);
+    //----------------------------------------------------------------------------
+}
+
+void MainWindow::_createCNSignalPlot()
+{
+    pt_cnsignalPlot = new QEasyPlot(NULL,tr("Count index"), tr("Centered & normalized signal"));
+    pt_cnsignalPlot->setWindowFlags(Qt::Window);
+    pt_cnsignalPlot->setContextMenuPolicy(Qt::ActionsContextMenu);
+    pt_cnsignalPlot->set_coordinatesPrecision(0,1);
+    pt_cnsignalPlot->set_vertical_Borders(5.0,-5.0);
+    pt_cnsignalPlot->set_horizontal_Borders(0, 100);
+    pt_cnsignalPlot->set_tracePen(QPen(QBrush(Qt::NoBrush),1.0), QColor(255,255,255));
+
+    //----------------------------------Actions----------------------------------
+    QAction *pt_spBackgroundAct = new QAction(tr("&BG_color"),pt_cnsignalPlot);
+    connect(pt_spBackgroundAct,SIGNAL(triggered()), pt_spectrumPlot, SLOT(open_backgroundColorDialog()));
+    QAction *pt_spCoordinateColorAct = new QAction(tr("&CS_color"),pt_cnsignalPlot);
+    connect(pt_spCoordinateColorAct,SIGNAL(triggered()), pt_cnsignalPlot, SLOT(open_coordinatesystemColorDialog()));
+    QAction *pt_spTraceColorAct = new QAction(tr("&TC_color"),pt_cnsignalPlot);
+    connect(pt_spTraceColorAct,SIGNAL(triggered()), pt_cnsignalPlot, SLOT(open_traceColorDialog()));
+    QAction *pt_spFontAct = new QAction(tr("&CS_font"),pt_cnsignalPlot);
+    connect(pt_spFontAct,SIGNAL(triggered()), pt_cnsignalPlot, SLOT(open_fontSelectDialog()));
+    pt_cnsignalPlot->addAction(pt_spBackgroundAct);
+    pt_cnsignalPlot->addAction(pt_spCoordinateColorAct);
+    pt_cnsignalPlot->addAction(pt_spTraceColorAct);
+    pt_cnsignalPlot->addAction(pt_spFontAct);
+    //----------------------------------------------------------------------------
+}
+
+void MainWindow::adjustTimer()
+{
+    QDialog dialog;
+    dialog.setWindowTitle(tr("Adjust timer"));
+    dialog.setFixedSize(196,100);
+
+    QHBoxLayout layout;
+    layout.setMargin(7);
+
+    QGroupBox groupbox(tr("Adjust spectrum timer, ms:"));
+    QHBoxLayout l_groupbox;
+    l_groupbox.setMargin(7);
+
+    QLabel label;
+    label.setFont(QFont("MS Shell Dlg", 14.0, QFont::DemiBold));
+    label.setAlignment(Qt::AlignCenter);
+    label.setNum(m_timer.interval());
+    label.setFrameStyle(QLabel::Sunken | QLabel::Box);
+    QDial dial;
+    dial.setNotchesVisible(true);
+    dial.setWrapping(false);
+    dial.setMinimum(100);
+    dial.setMaximum(10000);
+    dial.setPageStep(100);
+    dial.setSingleStep(10);
+    dial.setFixedSize(64,64);
+    //dial.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    dial.setValue(m_timer.interval());
+    connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));
+    connect(&dial, &QDial::valueChanged, &m_timer, &QTimer::setInterval);
+
+    l_groupbox.addWidget(&label);
+    l_groupbox.addWidget(&dial);
+
+    groupbox.setLayout(&l_groupbox);
+    layout.addWidget(&groupbox);
+
+    dialog.setLayout(&layout);
+    dialog.exec();
+}
+
+void MainWindow::closeEvent(QCloseEvent */*event*/)
+{
+    pt_cnsignalPlot->close();
+    pt_spectrumPlot->close();
 }

@@ -88,7 +88,7 @@ void QHarmonicProcessor::readData(const quint16 *v_data, quint16 data_length)
 
 void QHarmonicProcessor::computeFrequency()
 {
-    quint32 temp_m_curpos = m_curpos-1; // save current m_curpos
+    quint32 temp_m_curpos = m_curpos - 1; // save current m_curpos
     qreal buffer_duration = m_bufferlength*m_discretizationPeriod*m_strobe; // refresh data duration
     //Data preparation
     quint32 position = 0;
@@ -99,58 +99,68 @@ void QHarmonicProcessor::computeFrequency()
     }
     fftw_execute(plan);
 
+    qreal total_power = 0.0;
     for(quint16 i = 0; i < m_bufferlength/2 + 1; i++)
     {
-        v_Amplitude[i] = (v_Spectrum[i][0]*v_Spectrum[i][0] + v_Spectrum[i][1]*v_Spectrum[i][1])/5000;
+        v_Amplitude[i] = v_Spectrum[i][0]*v_Spectrum[i][0] + v_Spectrum[i][1]*v_Spectrum[i][1];
+        total_power += v_Amplitude[i];
+    }
+    for(quint16 i = 0; i < m_bufferlength/2 + 1; i++)
+    {
+        v_Amplitude[i] /= total_power;
     }
     emit spectrumUpdated(v_Amplitude,m_bufferlength/2 + 1);
 
     //position of max harmonic searching
-    quint16 lower_bound = (quint16)(LOWER_HR_LIMIT * buffer_duration / 1000); //You should ensure that ( LOW_HR_LIMIT < discretization frequency / 2 )
-    quint16 index_of_maxpower = 0;
-    qreal maxpower = 0.0;
+    quint16 bottom_bound = (BOTTOM_HR_LIMIT * buffer_duration / 1000); //You should ensure that ( BOTTOM_HR_LIMIT < discretization frequency / 2 + 1 )
+    quint16 top_bound = (TOP_HR_LIMIT * buffer_duration / 1000); // ... the same as above
 
-    for (int i = ( lower_bound + HALF_INTERVAL ); i < ( (m_bufferlength / 2 + 1) - HALF_INTERVAL ); i++)
+    if( (bottom_bound < m_bufferlength/2 + 1) && (top_bound < m_bufferlength/2 + 1) )
     {
-        qreal temp_power = v_Amplitude[i];
-        if ( maxpower < temp_power )
+        quint16 index_of_maxpower = 0;
+        qreal maxpower = 0.0;
+        for (int i = ( bottom_bound + HALF_INTERVAL ); i < ( top_bound - HALF_INTERVAL ); i++)
         {
-            maxpower = temp_power;
-            index_of_maxpower = i;
+            qreal temp_power = v_Amplitude[i];
+            if ( maxpower < temp_power )
+            {
+                maxpower = temp_power;
+                index_of_maxpower = i;
+            }
         }
-    }
-    //SNR estimation
-    qreal noise_power = 0.0;
-    qreal signal_power = 0.0;
-    for (quint16 i = lower_bound; i < (m_bufferlength / 2 + 1); i++)
-    {
-        if (  (i > (index_of_maxpower - HALF_INTERVAL)) && (i < (index_of_maxpower + HALF_INTERVAL)) )
+        //SNR estimation
+        qreal noise_power = 0.0;
+        qreal signal_power = 0.0;
+        for (quint16 i = bottom_bound; i < top_bound; i++)
         {
-            signal_power += v_Amplitude[i];
+            if( (i > (index_of_maxpower - HALF_INTERVAL)) && (i < (index_of_maxpower + HALF_INTERVAL)) )
+            {
+                signal_power += v_Amplitude[i];
+            }
+            else
+            {
+                noise_power += v_Amplitude[i];
+            }
+        }
+        m_SNR = 10 * log10( signal_power / noise_power );
+
+        qreal power_multiplyed_by_index = 0.0;
+        for (int i = (index_of_maxpower - HALF_INTERVAL + 1); i < (index_of_maxpower + HALF_INTERVAL); i++)
+        {
+            power_multiplyed_by_index += i * v_Amplitude[i];
+        }
+        qreal index_of_mass_center = power_multiplyed_by_index / signal_power;
+        m_SNR *= 1/(1 + (index_of_maxpower - index_of_mass_center)*(index_of_maxpower - index_of_mass_center));
+
+        if(m_SNR >= SNR_TRESHOLD)
+        {
+            m_frequency = index_of_mass_center * 60000 / buffer_duration;
+            emit frequencyUpdated(m_frequency, m_SNR);
         }
         else
         {
-            noise_power += v_Amplitude[i];
+            emit tooNoisy(m_SNR);
         }
-    }
-    m_SNR = 10 * log10( signal_power / noise_power );
-
-    qreal power_multiplyed_by_index = 0.0;
-    for (int i = (index_of_maxpower - HALF_INTERVAL + 1); i < (index_of_maxpower + HALF_INTERVAL); i++)
-    {
-        power_multiplyed_by_index += i * v_Amplitude[i];
-    }
-    qreal index_of_mass_center = power_multiplyed_by_index / signal_power;
-    m_SNR *= 1/(1 + (index_of_maxpower - index_of_mass_center)*(index_of_maxpower - index_of_mass_center));
-
-    if(m_SNR >= SNR_TRESHOLD)
-    {
-        m_frequency = index_of_mass_center * 60000 / buffer_duration;
-        emit frequencyUpdated(m_frequency, m_SNR);
-    }
-    else
-    {
-        emit tooNoisy(m_SNR);
     }
 }
 

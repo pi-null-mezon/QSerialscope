@@ -43,16 +43,17 @@ public slots:
     void startRecord();             // Open dialog to choose output file name
     void makeRecord(const quint16 *pointer, quint16 length); // Make record to output file
     void adjustStrobe();
-    void regimeDialog();
     void frequencyInStatusBar(qreal freq, qreal snr);
     void warningInStatusBar(qreal snr);
+    void adjustTimer();
 
 protected:
     void contextMenuEvent(QContextMenuEvent *event);
+    void closeEvent(QCloseEvent *event);
 
 private:
     QWidget *pt_centralWidget;
-    QVBoxLayout *pt_centralLayout;
+    QHBoxLayout *pt_centralLayout;
     QEasyPlot *pt_signalPlot;
     QAction *pt_startAction;
     QAction *pt_stopAction;
@@ -60,6 +61,7 @@ private:
     QAction *pt_exitAction;
     QAction *pt_recordAction;
     QAction *pt_strobeAction;
+    QAction *pt_timerAct;
     QMenu *pt_controlMenu;
     QMenu *pt_helpMenu;
     QTimer m_timer;
@@ -69,6 +71,14 @@ private:
     QHarmonicProcessor *pt_harmonicProcessor;
     QThread *pt_harmonicThread;
     QTransmissionDialog m_transmissionDialog;
+    QLabel m_infoLabel;
+
+    QEasyPlot *pt_spectrumPlot;
+    QAction *pt_spectrumAct;
+    QMenu *pt_windowsMenu;
+    QEasyPlot *pt_cnsignalPlot;
+    QAction *pt_cnsignalAct;
+
 
     QAction *pt_backgroundColorAct;
     QAction *pt_traceColorAct;
@@ -79,6 +89,9 @@ private:
     void _createActions();
     void _createMenus();
     void _createThreads();
+    void _createSpectrumPlot();
+    void _createCNSignalPlot();
+
 };
 
 #endif // MAINWINDOW_H
