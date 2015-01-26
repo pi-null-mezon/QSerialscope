@@ -71,12 +71,12 @@ bool QSerialProcessor::open()
 
     if(m_serialPort.open(QIODevice::ReadOnly) )
     {
-        if( /*m_serialPort.setBaudRate(QSerialPort::Baud115200)
+        if(    m_serialPort.setBaudRate(QSerialPort::Baud115200)
             && m_serialPort.setFlowControl(QSerialPort::NoFlowControl)
             && m_serialPort.setDataBits(QSerialPort::Data8)
             && m_serialPort.setParity(QSerialPort::NoParity)
             && m_serialPort.setStopBits(QSerialPort::OneStop)
-            &&*/ m_serialPort.setDataTerminalReady(QSerialPort::IgnorePolicy) ) // Qt 5.2.1 says that QSerialPort::IgnorePolicy is obsolete, but without this property explicit set, the transmission will not start...
+            && m_serialPort.setDataTerminalReady(true) )
         {
             m_serialPort.setReadBufferSize( m_bufferLength );
             qWarning() << "portName = " << m_serialPort.portName();

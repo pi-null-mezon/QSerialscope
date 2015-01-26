@@ -42,7 +42,7 @@ QHarmonicProcessor::~QHarmonicProcessor()
 
 void QHarmonicProcessor::readData(const quint16 *v_data, quint16 data_length)
 {
-    quint16 records = 0;
+    quint16 records = 0;   
     for(quint16 i = 0; i < data_length; i++)
     {
         m_accumulator += v_data[i];
