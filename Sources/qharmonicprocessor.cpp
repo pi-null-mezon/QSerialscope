@@ -71,9 +71,9 @@ void QHarmonicProcessor::readData(const quint16 *v_data, quint16 data_length)
         {
             sko += (v_RAW[j] - mean)*(v_RAW[j] - mean);
         }
-        if(sko < 0.00000001) // kind a protection of division by zero
+        if(sko < 0.000001) // kind a protection of division by zero
         {
-            sko = 0.0000001;
+            sko = 0.00001;
         }
         sko = sqrt(sko/(m_datalength-1));
 

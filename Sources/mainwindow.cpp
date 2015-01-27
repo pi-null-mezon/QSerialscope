@@ -81,7 +81,7 @@ void MainWindow::_createActions()
     pt_recordAction->setCheckable(true);
 
     pt_strobeAction = new QAction(tr("&Strobe"), this);
-    pt_strobeAction->setStatusTip(tr("Open strobe adjustment dialog"));
+    pt_strobeAction->setStatusTip(tr("Change discretization period"));
     pt_strobeAction->setShortcut(QKeySequence(tr("Alt+A")));
     connect(pt_strobeAction, SIGNAL(triggered()), this, SLOT(adjustStrobe()));
 
@@ -171,34 +171,40 @@ void MainWindow::showAboutDialog()
 {
     QDialog *aboutDialog = new QDialog();
     aboutDialog->setWindowTitle("About " + QString(APP_NAME));
-    aboutDialog->setFixedSize(256,128);
+    aboutDialog->setFixedSize(256,210);
 
     QVBoxLayout *tempLayout = new QVBoxLayout();
     tempLayout->setMargin(5);
 
     QLabel *projectnameLabel = new QLabel(QString(APP_NAME) + "\t" + QString(APP_VERSION));
-    projectnameLabel->setFrameStyle(QFrame::Box | QFrame::Sunken);
+    projectnameLabel->setFrameStyle(QFrame::Box | QFrame::Raised);
     projectnameLabel->setAlignment(Qt::AlignCenter);
-    QLabel *projectauthorsLabel = new QLabel(QString(APP_AUTHOR) + "\n\n" + QString(APP_COMPANY) + "\n\n" + QString::number(APP_YEAR));
-    projectauthorsLabel->setWordWrap(true);
+    QLabel *projectauthorsLabel = new QLabel(QString(APP_AUTHOR) + "\n" + QString(APP_COMPANY) + "\n" + QString::number(APP_YEAR));
     projectauthorsLabel->setAlignment(Qt::AlignCenter);
     QLabel *hyperlinkLabel = new QLabel(QString(APP_WEB));
-    hyperlinkLabel->setToolTip(tr("Send message"));
+    hyperlinkLabel->setToolTip(tr("Send an email"));
     hyperlinkLabel->setOpenExternalLinks(true);
     hyperlinkLabel->setAlignment(Qt::AlignCenter);
 
+    QLabel *serialLabel = new QLabel("Expected serial connection settings:\n- BAUD RATE 115200\n- 8 DATA BITS\n- ONE STOP BIT\n- NO FLOW CONTROL\n- NO PARITY");
+    serialLabel->setFrameStyle(QFrame::Sunken | QFrame::Box);
+    serialLabel->setMargin(6);
+
     tempLayout->addWidget(projectnameLabel);
     tempLayout->addWidget(projectauthorsLabel);
+    tempLayout->addWidget(serialLabel);
     tempLayout->addWidget(hyperlinkLabel);
+
 
     aboutDialog->setLayout(tempLayout);
     aboutDialog->exec();
 
-       delete hyperlinkLabel;
-       delete projectauthorsLabel;
-       delete projectnameLabel;
-       delete tempLayout;
-       delete aboutDialog;
+    delete hyperlinkLabel;
+    delete projectauthorsLabel;
+    delete projectnameLabel;
+    delete serialLabel;
+    delete tempLayout;
+    delete aboutDialog;
 }
 
 void MainWindow::openSerialConnection()
@@ -217,7 +223,7 @@ void MainWindow::openSerialConnection()
 
             pt_serialProcessor->setDataFormat(bytesNumber, m_transmissionDialog.getBitsOrder());
             pt_signalPlot->set_vertical_Borders(0.0, (qreal)(0x00001 << m_transmissionDialog.getBitsNumber()));
-            pt_signalPlot->set_axis_names(tr("Count index"), "Voltage, " + QString::number( m_transmissionDialog.getReferenceVoltage()/(0x00001 << m_transmissionDialog.getBitsNumber()),'f', 6) + " V per unit");
+            this->updateAxis(MIN_STROBE);
 
             if(pt_serialProcessor->open())
             {
@@ -306,7 +312,7 @@ void MainWindow::adjustStrobe()
     if(pt_harmonicProcessor)
     {
         QDialog dialog;
-        dialog.setWindowTitle(tr("Strobe dialog"));
+        dialog.setWindowTitle(tr("Strobe"));
         dialog.setFixedSize(196,100);
 
         QHBoxLayout layout;
@@ -332,6 +338,7 @@ void MainWindow::adjustStrobe()
         dial.setValue(pt_harmonicProcessor->getStrobe());
         connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));            
         connect(&dial, &QDial::valueChanged, pt_harmonicProcessor, &QHarmonicProcessor::setStrobe);
+        connect(&dial, SIGNAL(valueChanged(int)), this, SLOT(updateAxis(int)));
 
         l_groupbox.addWidget(&dial);
         l_groupbox.addWidget(&label);
@@ -351,7 +358,7 @@ void MainWindow::adjustStrobe()
 
 void MainWindow::frequencyInStatusBar(qreal freq, qreal snr)
 {
-    m_infoLabel.setText("Pulse harmonic frequency: " + QString::number(freq, 'f', 1) + " bpm, snr: " + QString::number(snr, 'f', 2) + " db");
+    m_infoLabel.setText("Pulse harmonic frequency: " + QString::number(qRound(freq)) + " bpm, snr: " + QString::number(snr, 'f', 2) + " db");
 }
 
 void MainWindow::warningInStatusBar(qreal snr)
@@ -415,7 +422,7 @@ void MainWindow::_createCNSignalPlot()
 void MainWindow::adjustTimer()
 {
     QDialog dialog;
-    dialog.setWindowTitle(tr("Adjust timer"));
+    dialog.setWindowTitle(tr("Timer"));
     dialog.setFixedSize(196,100);
 
     QHBoxLayout layout;
@@ -457,4 +464,10 @@ void MainWindow::closeEvent(QCloseEvent */*event*/)
 {
     pt_cnsignalPlot->close();
     pt_spectrumPlot->close();
+}
+
+void MainWindow::updateAxis(int strobe_value)
+{
+    pt_signalPlot->set_axis_names("Count, " + QString::number( 1000 * strobe_value * m_transmissionDialog.getDiscretizationPeriod(), 'f', 1 ) + " us per count",
+                                  "Voltage, " + QString::number( 1000 * m_transmissionDialog.getReferenceVoltage()/(0x00001 << m_transmissionDialog.getBitsNumber()),'f', 3) + " mV per unit");
 }

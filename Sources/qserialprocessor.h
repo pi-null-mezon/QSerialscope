@@ -17,7 +17,7 @@ class QSerialProcessor : public QObject
 {
     Q_OBJECT
 public:
-    explicit QSerialProcessor(QObject *parent = 0, quint16 bufferLength = 256);
+    explicit QSerialProcessor(QObject *parent = 0, quint16 bufferLength = 128);
     ~QSerialProcessor();
     enum BytesPerValue {One, Two};
     enum BitsOrder {LittleEndian, BigEndian};
@@ -41,7 +41,7 @@ private:
     quint16 *v_signalCounts;
     BytesPerValue m_bytesPerValue;
     BitsOrder m_bytesOrder;
-
+    quint8 m_lastByte;
     void convertOneByteData();
     void convertTwoByteData();
 };

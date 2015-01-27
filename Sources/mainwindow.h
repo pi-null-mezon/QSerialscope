@@ -46,6 +46,7 @@ public slots:
     void frequencyInStatusBar(qreal freq, qreal snr);
     void warningInStatusBar(qreal snr);
     void adjustTimer();
+    void updateAxis(int strobe_value);
 
 protected:
     void contextMenuEvent(QContextMenuEvent *event);
