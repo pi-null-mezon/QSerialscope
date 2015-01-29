@@ -49,6 +49,9 @@ Source: "C:\Qt\5.2.1\mingw48_32\bin\Qt5Core.dll"; DestDir: "{app}"; Flags: ignor
 Source: "C:\Qt\5.2.1\mingw48_32\bin\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Qt\5.2.1\mingw48_32\bin\Qt5SerialPort.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Qt\5.2.1\mingw48_32\bin\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Qt\5.2.1\mingw48_32\bin\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Qt\5.2.1\mingw48_32\bin\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Qt\5.2.1\mingw48_32\bin\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

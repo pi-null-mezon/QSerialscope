@@ -282,7 +282,7 @@ void MainWindow::startRecord()
             m_textstream.setDevice(&m_outputfile);
             m_textstream << QString(APP_NAME) + " output record\n"
                          << "Record was started at " + QDateTime::currentDateTime().toString("dd.MM.yyyy hh.mm.ss") + "\n"
-                         << "discretization period: " << QString::number(m_transmissionDialog.getDiscretizationPeriod(), 'f', 3)
+                         << "discretization period: " << QString::number(m_transmissionDialog.getDiscretizationPeriod(), 'f', 3) // strobe does not effwct on this, this is raw data
                          << " ms , gen.unit: " << QString::number(m_transmissionDialog.getReferenceVoltage(), 'f', 2)
                          << "/" << QString::number( (0x00001 << m_transmissionDialog.getBitsNumber()))
                          << " V\nValue, gen.unit\n";
