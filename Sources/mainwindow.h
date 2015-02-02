@@ -42,6 +42,7 @@ public slots:
     void closeSerialConnection();   // Close previous serial connection
     void startRecord();             // Open dialog to choose output file name
     void makeRecord(const quint16 *pointer, quint16 length); // Make record to output file
+    void makeRecord(const quint16 *pointer1, const quint16 *pointer2 , quint16 length); // Make record to output file
     void adjustStrobe();
     void frequencyInStatusBar(qreal freq, qreal snr);
     void warningInStatusBar(qreal snr);
@@ -56,6 +57,7 @@ private:
     QWidget *pt_centralWidget;
     QHBoxLayout *pt_centralLayout;
     QEasyPlot *pt_signalPlot;
+    QEasyPlot *pt_secondSignalPlot;
     QAction *pt_startAction;
     QAction *pt_stopAction;
     QAction *pt_aboutAction;
@@ -69,7 +71,8 @@ private:
     QTextStream m_textstream;
     QFile m_outputfile; 
     QSerialProcessor *pt_serialProcessor;
-    QHarmonicProcessor *pt_harmonicProcessor;
+    QHarmonicProcessor *pt_firstHarmonicProcessor;
+    QHarmonicProcessor *pt_secondHarmonicProcessor;
     QThread *pt_harmonicThread;
     QTransmissionDialog m_transmissionDialog;
     QLabel m_infoLabel;

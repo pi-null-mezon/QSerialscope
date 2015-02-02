@@ -21,6 +21,7 @@ public slots:
     uint getBitsNumber() const;
     qreal getDiscretizationPeriod() const;
     qreal getReferenceVoltage() const;
+    bool isTwoSignals() const;
 
 private slots:
     void on_RBlittleendian_clicked();

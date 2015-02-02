@@ -8,7 +8,8 @@ QSerialProcessor::QSerialProcessor(QObject *parent, quint16 bufferLength) :
 
 {
     m_bufferLength = bufferLength;
-    v_signalCounts = new quint16[bufferLength];
+    v_firstSignalCounts = new quint16[bufferLength];
+    v_secondSignalCounts = new quint16[bufferLength];
 
     connect(&m_serialPort, SIGNAL(readyRead()), this, SLOT(readData()));
     connect(&m_serialPort, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(handleErrors(QSerialPort::SerialPortError)));
@@ -17,7 +18,8 @@ QSerialProcessor::QSerialProcessor(QObject *parent, quint16 bufferLength) :
 QSerialProcessor::~QSerialProcessor()
 {
     close(); // close serial communication
-    delete[] v_signalCounts;
+    delete[] v_firstSignalCounts;
+    delete[] v_secondSignalCounts;
 }
 
 bool QSerialProcessor::showPortSelectDialog()
@@ -124,6 +126,9 @@ void QSerialProcessor::readData()
         case Two:
             convertTwoByteData();
             break;
+        case Two8bitSignals:
+            convertTwo8bitSignalsData();
+            break;
     }
 }
 
@@ -137,9 +142,9 @@ void QSerialProcessor::convertOneByteData()
 {
     for(int i = 0; i < m_dataBuffer.size(); i++)
     {
-        v_signalCounts[i] = 0x00FF & (quint16)m_dataBuffer.at(i);
+        v_firstSignalCounts[i] = 0x00FF & (quint16)m_dataBuffer.at(i);
     }
-    emit dataUpdated(v_signalCounts, m_dataBuffer.size());
+    emit dataUpdated(v_firstSignalCounts, m_dataBuffer.size());
 }
 
 void QSerialProcessor::convertTwoByteData()
@@ -169,33 +174,78 @@ void QSerialProcessor::convertTwoByteData()
         {
             if(shift == 2)
             {
-                v_signalCounts[bias] = (0x00FF & (quint16)m_lastByte) << 8;
-                v_signalCounts[bias] |= 0x00FF & (quint16)m_dataBuffer.at(0);
+                v_firstSignalCounts[bias] = (0x00FF & (quint16)m_lastByte) << 8;
+                v_firstSignalCounts[bias] |= 0x00FF & (quint16)m_dataBuffer.at(0);
                 bias++;
             }
             for(int i = 0; (i * 3 + shift + 1) < m_dataBuffer.size(); i++)
             {
                 position = i * 3 + shift;
-                v_signalCounts[i+bias] = (0x00FF & (quint16)m_dataBuffer.at( position )) << 8;
-                v_signalCounts[i+bias] |= 0x00FF & (quint16)m_dataBuffer.at( position + 1 );
+                v_firstSignalCounts[i+bias] = (0x00FF & (quint16)m_dataBuffer.at( position )) << 8;
+                v_firstSignalCounts[i+bias] |= 0x00FF & (quint16)m_dataBuffer.at( position + 1 );
             }
         }
         else // m_bytesOrder == BigEndian
         {
             if(shift == 2)
             {
-                v_signalCounts[bias] = 0x00FF & (quint16)m_lastByte;
-                v_signalCounts[bias] |= (0x00FF & (quint16)m_dataBuffer.at( 0 )) << 8;
+                v_firstSignalCounts[bias] = 0x00FF & (quint16)m_lastByte;
+                v_firstSignalCounts[bias] |= (0x00FF & (quint16)m_dataBuffer.at( 0 )) << 8;
                 bias++;
             }
             for(int i = 0; (i * 3 + shift + 1) < m_dataBuffer.size(); i++)
             {
                 position = i * 3 + shift;
-                v_signalCounts[i+bias] = 0x00FF & (quint16)m_dataBuffer.at( position );
-                v_signalCounts[i+bias] |= (0x00FF & (quint16)m_dataBuffer.at( position + 1 )) << 8;
+                v_firstSignalCounts[i+bias] = 0x00FF & (quint16)m_dataBuffer.at( position );
+                v_firstSignalCounts[i+bias] |= (0x00FF & (quint16)m_dataBuffer.at( position + 1 )) << 8;
             }
         }
-        emit dataUpdated(v_signalCounts, 1 + bias + (position - shift)/3);
+        emit dataUpdated(v_firstSignalCounts, 1 + bias + (position - shift)/3);
+    }
+}
+
+void QSerialProcessor::convertTwo8bitSignalsData()
+{
+    /* Note that in case of Two bytes per value format
+     * application waits following format of byte flow:
+     * ...(0xFF)(0xXX)(0xYY)(0xFF)(0xXX)(0xYY)...
+     * where 0xFF is used as format pointer         */
+
+    if(m_dataBuffer.size() > 4)
+    {
+        quint8 shift = 0; // initial shift of data bytes in incoming flow
+        if(((quint8)m_dataBuffer.at(0) & (quint8)m_dataBuffer.at(3)) == 0xFF)
+            shift = 1;
+        else if(((quint8)m_dataBuffer.at(1) & (quint8)m_dataBuffer.at(4)) == 0xFF)
+            shift = 2;
+
+        quint8 mod3 = m_dataBuffer.size() % 3;
+
+        if( ((shift == 2)&&(mod3 == 0))
+            || ((shift == 0)&&(mod3 == 1))
+            || ((shift == 1)&&(mod3 == 2)) )
+            m_lastByte = m_dataBuffer.at(m_dataBuffer.size() - 1);
+
+        int bias = 0;
+        if(shift == 2)
+        {
+            v_firstSignalCounts[bias] = 0x00FF & (quint16)m_lastByte;
+            v_secondSignalCounts[bias] = 0x00FF & (quint16)m_dataBuffer.at( 0 );
+            bias++;
+        }
+
+        int position;
+        for(int i = 0; (i * 3 + shift + 1) < m_dataBuffer.size(); i++)
+        {
+            position = i * 3 + shift;
+            v_firstSignalCounts[i+bias] = 0x00FF & (quint16)m_dataBuffer.at(position);
+            v_secondSignalCounts[i+bias] = 0x00FF & (quint16)m_dataBuffer.at(position + 1);
+        }
+
+        int dataLength = 1 + bias + (position - shift)/3;
+        emit dataUpdated(v_firstSignalCounts, dataLength);
+        emit dataUpdatedSecondChanell(v_secondSignalCounts, dataLength);
+        emit signalsUpdated(v_firstSignalCounts, v_secondSignalCounts, dataLength);
     }
 }
 

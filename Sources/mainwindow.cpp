@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 
-#define WINDOW_WIDTH 640
-#define WINDOW_HEIGHT 480
+#define WINDOW_WIDTH 1024
+#define WINDOW_HEIGHT 576
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -24,7 +24,17 @@ MainWindow::MainWindow(QWidget *parent)
     pt_signalPlot->set_X_Ticks(11);
     pt_signalPlot->set_Y_Ticks(9);
     pt_signalPlot->set_coordinatesPrecision(0,0);
+
+    pt_secondSignalPlot = new QEasyPlot(NULL, tr("Count index"), tr("Amplitude"));
+    pt_secondSignalPlot->set_tracePen(QPen(QBrush(Qt::NoBrush),1.0), QColor(255,0,0));
+    pt_secondSignalPlot->set_horizontal_Borders(0,100);
+    pt_secondSignalPlot->set_vertical_Borders(0,16);
+    pt_secondSignalPlot->set_X_Ticks(11);
+    pt_secondSignalPlot->set_Y_Ticks(9);
+    pt_secondSignalPlot->set_coordinatesPrecision(0,0);
+
     pt_centralLayout->addWidget(pt_signalPlot);
+    pt_centralLayout->addWidget(pt_secondSignalPlot);
 
     _createSpectrumPlot();
     _createCNSignalPlot();
@@ -45,7 +55,7 @@ MainWindow::~MainWindow()
 {
     closeSerialConnection();
 
-    if(pt_harmonicProcessor)
+    if(pt_firstHarmonicProcessor)
     {
         pt_harmonicThread->quit();
         pt_harmonicThread->wait();
@@ -127,7 +137,7 @@ void MainWindow::_createMenus()
     pt_controlMenu->addSeparator();
     pt_controlMenu->addAction(pt_exitAction);
 
-    pt_appearenceMenu = this->menuBar()->addMenu(tr("&Appearence"));
+    /*pt_appearenceMenu = this->menuBar()->addMenu(tr("&Appearence"));
     pt_appearenceMenu->addAction(pt_backgroundColorAct);
     pt_appearenceMenu->addAction(pt_coordinateColorAct);
     pt_appearenceMenu->addAction(pt_traceColorAct);
@@ -135,7 +145,7 @@ void MainWindow::_createMenus()
 
     pt_windowsMenu = this->menuBar()->addMenu(tr("&Plots"));
     pt_windowsMenu->addAction(pt_cnsignalAct);
-    pt_windowsMenu->addAction(pt_spectrumAct);
+    pt_windowsMenu->addAction(pt_spectrumAct);*/
 
 
     pt_helpMenu = this->menuBar()->addMenu(tr("&Help"));
@@ -146,13 +156,12 @@ void MainWindow::_createThreads()
 {
     //Serial processor
     pt_serialProcessor = new QSerialProcessor(this);
-
     //Timer
     m_timer.setTimerType(Qt::PreciseTimer);
     m_timer.setInterval(1000);
 
     //Harmonic processor
-    pt_harmonicProcessor = NULL;
+    pt_firstHarmonicProcessor = NULL;
     pt_harmonicThread = new QThread(this);
 }
 
@@ -163,7 +172,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event)
     menu.addAction(pt_stopAction);
     menu.addSeparator();
     menu.addAction(pt_strobeAction);
-    menu.addAction(pt_timerAct);
+   // menu.addAction(pt_timerAct);
     menu.exec(event->globalPos());
 }
 
@@ -223,27 +232,42 @@ void MainWindow::openSerialConnection()
 
             pt_serialProcessor->setDataFormat(bytesNumber, m_transmissionDialog.getBitsOrder());
             pt_signalPlot->set_vertical_Borders(0.0, (qreal)(0x00001 << m_transmissionDialog.getBitsNumber()));
+            pt_secondSignalPlot->set_vertical_Borders(0.0, (qreal)(0x00001 << m_transmissionDialog.getBitsNumber()));
+
             this->updateAxis(MIN_STROBE);
 
             if(pt_serialProcessor->open())
             {
-                if(pt_harmonicProcessor)
+                if(pt_firstHarmonicProcessor)
                 {
                     pt_harmonicThread->quit();
                     pt_harmonicThread->wait();
                 }
 
-                pt_harmonicProcessor = new QHarmonicProcessor();
-                pt_harmonicProcessor->moveToThread(pt_harmonicThread);
-                pt_harmonicProcessor->setDiscretizationPeriod(m_transmissionDialog.getDiscretizationPeriod());
-                connect(pt_harmonicThread, SIGNAL(finished()), pt_harmonicProcessor, SLOT(deleteLater()));
-                connect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), pt_harmonicProcessor, SLOT(readData(const quint16*,quint16)));
-                connect(pt_harmonicProcessor, SIGNAL(dataUpdated(const qreal*,quint16)), pt_signalPlot, SLOT(set_externalArray(const qreal*,quint16)));
-                connect(&m_timer, SIGNAL(timeout()), pt_harmonicProcessor, SLOT(computeFrequency()));
-                connect(pt_harmonicProcessor, SIGNAL(frequencyUpdated(qreal,qreal)), this, SLOT(frequencyInStatusBar(qreal,qreal)));
-                connect(pt_harmonicProcessor, SIGNAL(tooNoisy(qreal)), this, SLOT(warningInStatusBar(qreal)));
-                connect(pt_harmonicProcessor, SIGNAL(spectrumUpdated(const qreal*,quint16)), pt_spectrumPlot, SLOT(set_externalArray(const qreal*,quint16)));
-                connect(pt_harmonicProcessor, SIGNAL(signalUpdated(const qreal*,quint16)), pt_cnsignalPlot, SLOT(set_externalArray(const qreal*,quint16)));
+                pt_firstHarmonicProcessor = new QHarmonicProcessor();
+                pt_firstHarmonicProcessor->moveToThread(pt_harmonicThread);
+                pt_firstHarmonicProcessor->setDiscretizationPeriod(m_transmissionDialog.getDiscretizationPeriod());
+                connect(pt_harmonicThread, SIGNAL(finished()), pt_firstHarmonicProcessor, SLOT(deleteLater()));
+                connect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), pt_firstHarmonicProcessor, SLOT(readData(const quint16*,quint16)));
+                connect(pt_firstHarmonicProcessor, SIGNAL(dataUpdated(const qreal*,quint16)), pt_signalPlot, SLOT(set_externalArray(const qreal*,quint16)));
+                //connect(&m_timer, SIGNAL(timeout()), pt_firstHarmonicProcessor, SLOT(computeFrequency()));
+                connect(pt_firstHarmonicProcessor, SIGNAL(frequencyUpdated(qreal,qreal)), this, SLOT(frequencyInStatusBar(qreal,qreal)));
+                connect(pt_firstHarmonicProcessor, SIGNAL(tooNoisy(qreal)), this, SLOT(warningInStatusBar(qreal)));
+                connect(pt_firstHarmonicProcessor, SIGNAL(spectrumUpdated(const qreal*,quint16)), pt_spectrumPlot, SLOT(set_externalArray(const qreal*,quint16)));
+                connect(pt_firstHarmonicProcessor, SIGNAL(signalUpdated(const qreal*,quint16)), pt_cnsignalPlot, SLOT(set_externalArray(const qreal*,quint16)));
+
+                if(m_transmissionDialog.isTwoSignals())
+                {
+                    pt_serialProcessor->setDataFormat(QSerialProcessor::Two8bitSignals, (QSerialProcessor::BitsOrder)0);
+                    pt_secondHarmonicProcessor = new QHarmonicProcessor();
+                    pt_secondHarmonicProcessor->moveToThread(pt_harmonicThread);
+                    pt_secondHarmonicProcessor->setDiscretizationPeriod(m_transmissionDialog.getDiscretizationPeriod());
+                    connect(pt_harmonicThread, SIGNAL(finished()), pt_secondHarmonicProcessor, SLOT(deleteLater()));
+                    connect(pt_serialProcessor, SIGNAL(dataUpdatedSecondChanell(const quint16*,quint16)), pt_secondHarmonicProcessor, SLOT(readData(const quint16*,quint16)));
+                    connect(pt_secondHarmonicProcessor, SIGNAL(dataUpdated(const qreal*,quint16)), pt_secondSignalPlot, SLOT(set_externalArray(const qreal*,quint16)));
+                    //connect(&m_timer, SIGNAL(timeout()), pt_secondHarmonicProcessor, SLOT(computeFrequency()));
+                }
+
                 pt_harmonicThread->start();
             }
             m_timer.start();
@@ -280,13 +304,26 @@ void MainWindow::startRecord()
         if(m_outputfile.isOpen())
         {
             m_textstream.setDevice(&m_outputfile);
-            m_textstream << QString(APP_NAME) + " output record\n"
-                         << "Record was started at " + QDateTime::currentDateTime().toString("dd.MM.yyyy hh.mm.ss") + "\n"
-                         << "discretization period: " << QString::number(m_transmissionDialog.getDiscretizationPeriod(), 'f', 3) // strobe does not effwct on this, this is raw data
-                         << " ms , gen.unit: " << QString::number(m_transmissionDialog.getReferenceVoltage(), 'f', 2)
-                         << "/" << QString::number( (0x00001 << m_transmissionDialog.getBitsNumber()))
-                         << " V\nValue, gen.unit\n";
-            connect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), this, SLOT(makeRecord(const quint16*,quint16)));
+            if(m_transmissionDialog.isTwoSignals())
+            {
+                m_textstream << QString(APP_NAME) + " output record\n"
+                             << "Record was started at " + QDateTime::currentDateTime().toString("dd.MM.yyyy hh.mm.ss") + "\n"
+                             << "discretization period: " << QString::number(m_transmissionDialog.getDiscretizationPeriod(), 'f', 3) // strobe does not effwct on this, this is raw data
+                             << " ms , gen.unit: " << QString::number(m_transmissionDialog.getReferenceVoltage(), 'f', 2)
+                             << "/" << QString::number( (0x00001 << m_transmissionDialog.getBitsNumber()))
+                             << " V\nSignal1, gen.unit\tSignal2, gen.unit\n";
+                connect(pt_serialProcessor, SIGNAL(signalsUpdated(const quint16*,const quint16*,quint16)), this, SLOT(makeRecord(const quint16*, const quint16*,quint16)));
+            }
+            else
+            {
+                m_textstream << QString(APP_NAME) + " output record\n"
+                             << "Record was started at " + QDateTime::currentDateTime().toString("dd.MM.yyyy hh.mm.ss") + "\n"
+                             << "discretization period: " << QString::number(m_transmissionDialog.getDiscretizationPeriod(), 'f', 3) // strobe does not effwct on this, this is raw data
+                             << " ms , gen.unit: " << QString::number(m_transmissionDialog.getReferenceVoltage(), 'f', 2)
+                             << "/" << QString::number( (0x00001 << m_transmissionDialog.getBitsNumber()))
+                             << " V\nSignal, gen.unit\n";
+                connect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), this, SLOT(makeRecord(const quint16*,quint16)));
+            }
             pt_recordAction->setChecked(true);
         }
     }
@@ -307,9 +344,18 @@ void MainWindow::makeRecord(const quint16*pointer, quint16 length)
    }
 }
 
+void MainWindow::makeRecord(const quint16 *pointer1, const quint16 *pointer2, quint16 length)
+{
+    if(m_outputfile.isOpen())
+    {
+        for(quint16 i = 0; i < length; i++)
+            m_textstream << pointer1[i] << "\t" << pointer2[i] <<  "\n";
+    }
+}
+
 void MainWindow::adjustStrobe()
 {
-    if(pt_harmonicProcessor)
+    if(pt_firstHarmonicProcessor)
     {
         QDialog dialog;
         dialog.setWindowTitle(tr("Strobe"));
@@ -325,7 +371,7 @@ void MainWindow::adjustStrobe()
         QLabel label;
         label.setFont(QFont("MS Shell Dlg", 14.0, QFont::DemiBold));
         label.setAlignment(Qt::AlignCenter);
-        label.setNum(pt_harmonicProcessor->getStrobe());
+        label.setNum(pt_firstHarmonicProcessor->getStrobe());
         label.setFrameStyle(QLabel::Sunken | QLabel::Box);
         QDial dial;
         dial.setNotchesVisible(true);
@@ -335,9 +381,10 @@ void MainWindow::adjustStrobe()
         dial.setSingleStep(1);
         dial.setFixedSize(64,64);
         //dial.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        dial.setValue(pt_harmonicProcessor->getStrobe());
+        dial.setValue(pt_firstHarmonicProcessor->getStrobe());
         connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));            
-        connect(&dial, &QDial::valueChanged, pt_harmonicProcessor, &QHarmonicProcessor::setStrobe);
+        connect(&dial, &QDial::valueChanged, pt_firstHarmonicProcessor, &QHarmonicProcessor::setStrobe);
+        connect(&dial, &QDial::valueChanged, pt_secondHarmonicProcessor, &QHarmonicProcessor::setStrobe);
         connect(&dial, SIGNAL(valueChanged(int)), this, SLOT(updateAxis(int)));
 
         l_groupbox.addWidget(&dial);

@@ -324,6 +324,19 @@
        <string>bit/value</string>
       </property>
      </widget>
+     <widget class="QCheckBox" name="CBTwoSignals">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>170</y>
+        <width>111</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>enroll as two signals</string>
+      </property>
+     </widget>
     </widget>
    </item>
    <item>

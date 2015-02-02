@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "adc2pc"
-#define MyAppVersion "1.0.0.0"
+#define MyAppVersion "1.0.0.0b"
 #define MyAppPublisher "pi-null-mezon"
 #define MyAppURL "https://github.com/pi-null-mezon/QVASS"
 #define MyAppExeName "adc2pc.exe"
@@ -11,7 +11,7 @@
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{AC803A7E-E53D-4338-B78D-0C9BA713443A}
+AppId={{4DEB5D29-3208-4748-A7F1-3EFAA774DD48}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}

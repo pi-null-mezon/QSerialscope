@@ -40,6 +40,8 @@ void QTransmissionDialog::on_pushButton_clicked()
         {
             ui->RBbigendian->setEnabled(true);
             ui->RBlittleendian->setEnabled(true);
+            ui->CBTwoSignals->setChecked(false);
+            ui->CBTwoSignals->setEnabled(false);
         }
     }
     ui->Ebits->setText(QString::number(bits));
@@ -55,6 +57,7 @@ void QTransmissionDialog::on_pushButton_2_clicked()
         {
             ui->RBbigendian->setEnabled(false);
             ui->RBlittleendian->setEnabled(false);
+            ui->CBTwoSignals->setEnabled(true);
         }
     }
     ui->Ebits->setText(QString::number(bits));
@@ -101,4 +104,9 @@ void QTransmissionDialog::on_Bdefault_clicked()
 void QTransmissionDialog::on_Dvoltage_valueChanged(int value)
 {
     ui->Evoltage->setText(QString::number(value * VOLTAGE_STEP));
+}
+
+bool QTransmissionDialog::isTwoSignals() const
+{
+    return ui->CBTwoSignals->isChecked();
 }
