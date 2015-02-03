@@ -384,7 +384,10 @@ void MainWindow::adjustStrobe()
         dial.setValue(pt_firstHarmonicProcessor->getStrobe());
         connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));            
         connect(&dial, &QDial::valueChanged, pt_firstHarmonicProcessor, &QHarmonicProcessor::setStrobe);
-        connect(&dial, &QDial::valueChanged, pt_secondHarmonicProcessor, &QHarmonicProcessor::setStrobe);
+        if(m_transmissionDialog.isTwoSignals())
+        {
+            connect(&dial, &QDial::valueChanged, pt_secondHarmonicProcessor, &QHarmonicProcessor::setStrobe);
+        }
         connect(&dial, SIGNAL(valueChanged(int)), this, SLOT(updateAxis(int)));
 
         l_groupbox.addWidget(&dial);
