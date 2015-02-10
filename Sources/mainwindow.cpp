@@ -333,7 +333,7 @@ void MainWindow::adjustStrobe()
         dial.setMinimum(MIN_STROBE);
         dial.setMaximum(MAX_STROBE);
         dial.setSingleStep(1);
-        dial.setFixedSize(64,64);
+        dial.setFixedSize(54,54);
         //dial.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         dial.setValue(pt_harmonicProcessor->getStrobe());
         connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));            
@@ -444,7 +444,7 @@ void MainWindow::adjustTimer()
     dial.setMaximum(10000);
     dial.setPageStep(100);
     dial.setSingleStep(10);
-    dial.setFixedSize(64,64);
+    dial.setFixedSize(54,54);
     //dial.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     dial.setValue(m_timer.interval());
     connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));

@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "adc2pc"
-#define MyAppVersion "1.0.0.0"
+#define MyAppVersion "1.0.0.1"
 #define MyAppPublisher "pi-null-mezon"
 #define MyAppURL "https://github.com/pi-null-mezon/QVASS"
 #define MyAppExeName "adc2pc.exe"
@@ -11,7 +11,7 @@
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{AC803A7E-E53D-4338-B78D-0C9BA713443A}
+AppId={{6E9BEFC4-7E42-4149-803B-8FF0E9E6AA0A}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -26,7 +26,7 @@ LicenseFile=C:\Programing\QVASS\LICENSE
 InfoBeforeFile=C:\Programing\QVASS\README.md
 OutputDir=C:\Programing\QVASS\Install
 OutputBaseFilename=adc2pc_setup
-SetupIconFile=C:\Programing\QPULSECAPTURE\Resources\Inno_setup_script\Setup.ico
+SetupIconFile=C:\Programing\QPULSECAPTURE\Resources\Docs\Setup.ico
 Compression=lzma
 SolidCompression=yes
 

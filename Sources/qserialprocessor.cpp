@@ -114,16 +114,20 @@ void QSerialProcessor::handleErrors(QSerialPort::SerialPortError code)
 
 void QSerialProcessor::readData()
 {
-    m_dataBuffer = m_serialPort.readAll();
-    qWarning() << "readyRead() signal has occured, the quantity of incoming bytes is: " << (quint8)m_dataBuffer.size();
-    switch(m_bytesPerValue)
+    m_dataBuffer.append( m_serialPort.readAll() );
+    qWarning() << "readyRead() signal has occured, m_dataBuffer.size() is: " << m_dataBuffer.size();
+    if(m_dataBuffer.size() > 4)
     {
-        case One:
-            convertOneByteData();
-            break;
-        case Two:
-            convertTwoByteData();
-            break;
+        switch(m_bytesPerValue)
+        {
+            case One:
+                convertOneByteData();
+                break;
+            case Two:
+                convertTwoByteData();
+                break;
+        }
+        m_dataBuffer.clear();
     }
 }
 

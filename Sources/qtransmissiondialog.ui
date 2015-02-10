@@ -280,7 +280,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Referense voltage, V</string>
+       <string>Reference voltage, V</string>
       </property>
      </widget>
      <widget class="QDial" name="Dvoltage">
