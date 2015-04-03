@@ -2,22 +2,23 @@
  *  ARDUINO SKETCH
  *  Microprogram will sampling the analogue input and right away sends digitized values to the serial port.
  *  Some settings facilities are available on the following serial terminal codes: 
- *  'm' - turns on general regime of measurements 
- *  't' - turns on sampling period measurements
- *  's' - turns on sampling period change procedure
- *  'p' - turns on pin change procedure
- *  You should know, that minimum sampling period on UNO R3 in 2015 was about 125-130 us, thus by means of 's'
- *  You can only add some time to this limit. Taranov Alex, 2015
+ *  'm' - start measurements 
+ *  't' - measure sampling period & stop
+ *  'd' - set delay & stop
+ *  'p' - set pin & stop
+ *  Remember that the board is reset on serial connection establishing (see docs...),
+ *  so if you do not fix this particular feature, all settings will desappear after new connection!  
+ *  Taranov Alex, 2015
  ------------------------------------------------------------------------------------------------------*/
 
 #define SERIAL_SPEED 115200 // bps, serial transmission speed
 #define DEFAULT_PIN 0 // pin_id for the sampling
-#define DEFAULT_PERIOD 2000 // us
+#define DEFAULT_DELAY 100 // in us
 
 byte m_pin = DEFAULT_PIN;
 int  m_measurement;
-int  m_symboll = 'm';
-long m_period = DEFAULT_PERIOD; 
+int  m_symbol = 'm';
+long m_delay = DEFAULT_DELAY; 
 
 void setup()
 {
@@ -27,25 +28,23 @@ void setup()
 void loop()
 {
   if(Serial.available()) {
-    m_symboll = Serial.read();
+    m_symbol = Serial.read();
   }
-  switch(m_symboll)
-  {
-    case 'm':
-      makeMeasurement();
-      break;
-     case 't':
-       Serial.println(runSpeedTest());
-       m_symboll = 'm';	
+  switch(m_symbol) {
+     case 'm':
+       makeMeasurement();
        break;
-     case 's':
-       setSamplingPeriod();
+     case 't':
+       runSpeedTest();
+       m_symbol = 0;
+       break;
+     case 'd':
+       setDelay();
+       m_symbol = 0;
        break;
      case 'p':
        setPin();
-       break;
-     default:
-       m_symboll = 'm';
+       m_symbol = 0;
        break;	
   }
 }
@@ -60,27 +59,27 @@ void makeMeasurement() // works in BigEndian Regime
   }
   Serial.write((byte)(m_measurement >> 8) & 0x03);
   Serial.write(0xFF); // A markup symbol: ...0xFF 0xXX 0xXX 0xFF 0xXX 0xXX 0xFF 0xXX... 
-  delayMicroseconds(m_period);  
+  delayMicroseconds(m_delay);  
 }
 
-float runSpeedTest()
+void runSpeedTest()
 {
   unsigned long timestamp = micros();  
   for(int i = 0; i < 256; i++) {
     makeMeasurement();
   }
-  return (micros() - timestamp)/256.0;    
+  Serial.println((micros() - timestamp)/256.0);   
 }
 
-void setSamplingPeriod()
+void setDelay()
 {
-  Serial.print("Send appropriate sampling period in us: ");
+  Serial.print("Set desirable delay in us: ");
   bool readyFlag = false;
-  while(!readyFlag)
-  {
-    if(Serial.available())
-    {
-      m_period = Serial.parseInt();
+  while(!readyFlag) {
+    if(Serial.available()) {
+      m_delay = Serial.parseInt();
+      Serial.print (m_delay);
+      Serial.println(" us");
       readyFlag = true;
     }  
   }
@@ -88,17 +87,18 @@ void setSamplingPeriod()
 
 void setPin()
 {
-  Serial.print("Send appropriate pin number: ");
+  Serial.print("Set desirable pin number: ");
   bool readyFlag = false;
-  while(!readyFlag)
-  {
-    if(Serial.available())
-    {
+  while(!readyFlag)  {
+    if(Serial.available()) {
       m_pin = Serial.parseInt();
-      if((m_pin < 8) && (m_pin >=0))
+      if((m_pin >=0) && (m_pin < 8)) {
+        Serial.print(m_pin);
+        Serial.println(" pin selected");
         readyFlag = true;
-      else
-        Serial.print("Out of appropriate range, try another value: ");
+      } else {
+        Serial.print("out of range! try another value: ");
+      }
     }  
   }    
 }
