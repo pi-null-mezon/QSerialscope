@@ -44,7 +44,7 @@ public slots:
 
 private:
     qreal *v_RAW;           //a pointer to spattialy averaged data (you should use it to write data to an instance of a class)
-    qreal *v_DataForFFT;     //a pointer to data prepared for FFT, explicit float because fftwf (single precision) is used
+    double *v_DataForFFT;     //a pointer to data prepared for FFT, explicit float because fftwf (single precision) is used
     qreal m_frequency;      //a variable for storing a last evaluated frequency of the 'strongest' harmonic
     quint16 m_curpos;       //a current position I meant
     quint16 m_datalength;   //a length of data array

@@ -1,6 +1,6 @@
 #include "qharmonicprocessor.h"
 
-#ifdef MINGW_COMPILER
+#ifdef DEFINE_USE_CMATH
 #include <cmath>
 #endif
 
@@ -18,7 +18,7 @@ QHarmonicProcessor::QHarmonicProcessor(QObject *parent, quint16 length_of_data, 
     v_RAW = new qreal[m_datalength];
     v_Signal = new qreal[m_datalength];
 
-    v_DataForFFT = new qreal[m_bufferlength];
+    v_DataForFFT = new double[m_bufferlength];
     v_Spectrum = (fftw_complex*) fftw_malloc( sizeof(fftw_complex) * (m_bufferlength/2+1) );
     v_Amplitude = new qreal[m_bufferlength/2+1];
 

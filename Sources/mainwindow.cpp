@@ -77,7 +77,7 @@ void MainWindow::_createActions()
     pt_recordAction = new QAction(tr("&Record"), this);
     pt_recordAction->setShortcut(QKeySequence(tr("Ctrl+R")));
     pt_recordAction->setStatusTip(tr("Enables/disables record"));
-    connect(pt_recordAction, &QAction::triggered, this, &MainWindow::startRecord);
+    connect(pt_recordAction, SIGNAL(triggered()), this, SLOT(startRecord()));
     pt_recordAction->setCheckable(true);
 
     pt_strobeAction = new QAction(tr("&Strobe"), this);
@@ -148,7 +148,6 @@ void MainWindow::_createThreads()
     pt_serialProcessor = new QSerialProcessor(this);
 
     //Timer
-    m_timer.setTimerType(Qt::PreciseTimer);
     m_timer.setInterval(1000);
 
     //Harmonic processor
@@ -337,7 +336,7 @@ void MainWindow::adjustStrobe()
         //dial.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         dial.setValue(pt_harmonicProcessor->getStrobe());
         connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));            
-        connect(&dial, &QDial::valueChanged, pt_harmonicProcessor, &QHarmonicProcessor::setStrobe);
+        connect(&dial, SIGNAL(valueChanged(int)), pt_harmonicProcessor, SLOT(setStrobe(int)));
         connect(&dial, SIGNAL(valueChanged(int)), this, SLOT(updateAxis(int)));
 
         l_groupbox.addWidget(&dial);
@@ -448,7 +447,7 @@ void MainWindow::adjustTimer()
     //dial.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     dial.setValue(m_timer.interval());
     connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));
-    connect(&dial, &QDial::valueChanged, &m_timer, &QTimer::setInterval);
+    connect(&dial, SIGNAL(valueChanged(int)), &m_timer, SLOT(setInterval(int)));
 
     l_groupbox.addWidget(&label);
     l_groupbox.addWidget(&dial);

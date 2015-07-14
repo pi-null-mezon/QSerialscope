@@ -5,10 +5,26 @@
 #-------------------------------------------------
 
 QT       += core \
-            gui \
-            serialport
+            gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
+#--------------------CONFIG------------------------
+!win32 {
+
+    CONFIG +=   raspbian \
+                serialport
+    message("Build on raspberry for raspberry")
+
+} else {
+
+    QT += serialport
+
+}
+
+CONFIG(release, debug|release): DEFINES += QT_NO_WARNING_OUTPUT \
+                                           QT_NO_DEBUG_STREAM
+
 
 #------------------App Info-----------------------
 TEMPLATE = app
@@ -34,11 +50,11 @@ HEADERS  += mainwindow.h \
 include(FFTW.pri)
 include(QEasyPlot.pri)
 
-#--------------------CONFIG------------------------
+#-------------_----Forms & icons-------------------
+FORMS +=    qtransmissiondialog.ui
 RC_ICONS = $$PWD/../Resources/adc2pc.ico
-CONFIG(release, debug|release): DEFINES += QT_NO_WARNING_OUTPUT
-win32-g++: DEFINES += MINGW_COMPILER
 
-FORMS += \
-    qtransmissiondialog.ui
+
+#------------------Additional----------------------
+win32-g++|raspbian: DEFINES += DEFINE_USE_CMATH
 
