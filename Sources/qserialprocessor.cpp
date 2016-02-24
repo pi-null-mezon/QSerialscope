@@ -33,9 +33,10 @@ bool QSerialProcessor::showPortSelectDialog()
             QComboBox combobox;
             QList<QSerialPortInfo> ports = QSerialPortInfo::availablePorts();
             for(int i = 0; i < ports.size(); i++)
-            {
                 combobox.addItem( ports.at(i).portName() );
-            }
+            if(ports.size() > 1)
+                combobox.setCurrentIndex(1);
+
         l_groupbox.addWidget(&combobox);
         groupbox.setLayout(&l_groupbox);
 

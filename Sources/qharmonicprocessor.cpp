@@ -42,14 +42,16 @@ QHarmonicProcessor::~QHarmonicProcessor()
 
 void QHarmonicProcessor::readData(const quint16 *v_data, quint16 data_length)
 {
-    quint16 records = 0;   
+    quint16 records = 0;
+    qreal tempValue;
     for(quint16 i = 0; i < data_length; i++)
     {
         m_accumulator += v_data[i];
         m_counter++;
-        if( m_counter == m_strobe )
-        {
-            v_RAW[loop(m_curpos + records)] = m_accumulator / m_strobe;
+        if( m_counter == m_strobe ) {
+            tempValue = m_accumulator / m_strobe;
+            v_RAW[loop(m_curpos + records)] = tempValue;
+            emit countUpdated((quint16)tempValue);
             m_accumulator = 0.0;
             m_counter = 0;
             records++;
@@ -61,26 +63,20 @@ void QHarmonicProcessor::readData(const quint16 *v_data, quint16 data_length)
         emit dataUpdated(v_RAW, m_datalength);
         qreal mean = 0.0;
         for(quint32 j = 0; j < m_datalength; j++)
-        {
             mean += v_RAW[j];
-        }
         mean /= m_datalength;
 
         qreal sko = 0.0;
         for(quint32 j = 0; j < m_datalength; j++)
-        {
             sko += (v_RAW[j] - mean)*(v_RAW[j] - mean);
-        }
-        if(sko < 0.000001) // kind a protection of division by zero
-        {
-            sko = 0.00001;
-        }
-        sko = sqrt(sko/(m_datalength-1));
+        if(sko < 0.01) // kind a protection of division by zero
+            sko = 1.0;
+        else
+            sko = sqrt(sko/(m_datalength-1));
 
         for(quint16 i = 0; i < records; i++)
-        {
             v_Signal[loop(m_curpos+i)] = (v_RAW[loop(m_curpos+i)] - mean)/sko;
-        }
+
         emit signalUpdated(v_Signal, m_datalength);
         m_curpos = (m_curpos + records) % m_datalength;
     }
@@ -89,7 +85,7 @@ void QHarmonicProcessor::readData(const quint16 *v_data, quint16 data_length)
 void QHarmonicProcessor::computeFrequency()
 {
     quint32 temp_m_curpos = m_curpos - 1; // save current m_curpos
-    qreal buffer_duration = m_bufferlength*m_discretizationPeriod*m_strobe; // refresh data duration
+    qreal buffer_duration = m_bufferlength * m_discretizationPeriod * m_strobe; // refresh data duration
     //Data preparation
     quint32 position = 0;
     for (quint32 i = 0; i < m_bufferlength; i++)
@@ -134,13 +130,9 @@ void QHarmonicProcessor::computeFrequency()
         for (quint16 i = bottom_bound; i < top_bound; i++)
         {
             if( (i > (index_of_maxpower - HALF_INTERVAL)) && (i < (index_of_maxpower + HALF_INTERVAL)) )
-            {
                 signal_power += v_Amplitude[i];
-            }
             else
-            {
                 noise_power += v_Amplitude[i];
-            }
         }
         m_SNR = 10 * log10( signal_power / noise_power );
 
@@ -150,11 +142,11 @@ void QHarmonicProcessor::computeFrequency()
             power_multiplyed_by_index += i * v_Amplitude[i];
         }
         qreal index_of_mass_center = power_multiplyed_by_index / signal_power;
-        m_SNR *= 1/(1 + (index_of_maxpower - index_of_mass_center)*(index_of_maxpower - index_of_mass_center));
+        m_SNR *= 1 / (1 + (index_of_maxpower - index_of_mass_center)*(index_of_maxpower - index_of_mass_center));
 
         if(m_SNR >= SNR_TRESHOLD)
         {
-            m_frequency = index_of_mass_center * 60000 / buffer_duration;
+            m_frequency = index_of_mass_center * 60000.0 / buffer_duration;
             emit frequencyUpdated(m_frequency, m_SNR);
         }
         else
@@ -194,4 +186,9 @@ quint16 QHarmonicProcessor::getStrobe() const
 void QHarmonicProcessor::setDiscretizationPeriod(qreal value) // in ms
 {
     m_discretizationPeriod = value;
+}
+
+qreal QHarmonicProcessor::getDiscretizationPeriod() const
+{
+    return m_discretizationPeriod*m_strobe; //in ms
 }

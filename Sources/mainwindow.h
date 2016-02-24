@@ -42,6 +42,7 @@ public slots:
     void closeSerialConnection();   // Close previous serial connection
     void startRecord();             // Open dialog to choose output file name
     void makeRecord(const quint16 *pointer, quint16 length); // Make record to output file
+    void makeRecord(quint16); // Make record to output file
     void adjustStrobe();
     void frequencyInStatusBar(qreal freq, qreal snr);
     void warningInStatusBar(qreal snr);

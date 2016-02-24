@@ -34,6 +34,7 @@ signals:
     void frequencyUpdated(qreal frequency_value, qreal snr);
     void dataUpdated(const qreal *pointer_to_data, quint16 length_of_data);
     void tooNoisy(qreal snr);
+    void countUpdated(quint16 value);
 
 public slots:
     void  readData(const quint16 *v_data, quint16 data_length);
@@ -41,6 +42,7 @@ public slots:
     void setStrobe(int value);
     void setDiscretizationPeriod(qreal value);
     quint16 getStrobe() const;
+    qreal getDiscretizationPeriod() const;
 
 private:
     qreal *v_RAW;           //a pointer to spattialy averaged data (you should use it to write data to an instance of a class)

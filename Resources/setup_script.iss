@@ -2,16 +2,18 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "adc2pc"
-#define MyAppVersion "1.0.0.1"
+#define MyAppVersion "1.0.1.0"
 #define MyAppPublisher "pi-null-mezon"
 #define MyAppURL "https://github.com/pi-null-mezon/QVASS"
 #define MyAppExeName "adc2pc.exe"
+
+#define QtPath "C:\Qt\5.5\mingw492_32"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{6E9BEFC4-7E42-4149-803B-8FF0E9E6AA0A}
+AppId={{0F95C487-A0A7-4A69-BE46-59A50B6E6A12}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -22,11 +24,10 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={pf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-LicenseFile=C:\Programing\QVASS\LICENSE
-InfoBeforeFile=C:\Programing\QVASS\README.md
-OutputDir=C:\Programing\QVASS\Install
+LicenseFile=C:\Programming\QVASS\LICENSE
+InfoBeforeFile=C:\Programming\QVASS\README.md
+OutputDir=C:\Programming\Releases\
 OutputBaseFilename=adc2pc_setup
-SetupIconFile=C:\Programing\QPULSECAPTURE\Resources\Docs\Setup.ico
 Compression=lzma
 SolidCompression=yes
 
@@ -37,21 +38,19 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Programing\QVASS\Install\build-Sources-Desktop_Qt_5_2_1_MinGW_32bit-Release\release\adc2pc.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Programing\3rdParties\FFTW\fftw3-32\libfftw3-3.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\plugins\platforms\qminimal.dll"; DestDir: "{app}\platforms"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\plugins\platforms\qoffscreen.dll"; DestDir: "{app}\platforms"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\plugins\platforms\qwindows.dll"; DestDir: "{app}\platforms"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\bin\icuin51.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\bin\icudt51.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\bin\icuuc51.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\bin\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\bin\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\bin\Qt5SerialPort.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\bin\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\bin\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\bin\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Qt\5.2.1\mingw48_32\bin\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Programming\qvass\build\build-Sources-Desktop_Qt_5_5_1_MinGW_32bit-Release\release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Programming\3rdParties\FFTW\fftw3-32\libfftw3-3.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\plugins\platforms\qwindows.dll"; DestDir: "{app}\platforms"; Flags: ignoreversion
+Source: "{#QtPath}\bin\icuin54.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\icudt54.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\icuuc54.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\Qt5SerialPort.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

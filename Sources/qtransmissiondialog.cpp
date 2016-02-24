@@ -1,9 +1,6 @@
 #include "qtransmissiondialog.h"
 #include "ui_qtransmissiondialog.h"
 
-#define TIME_STEP 0.001 // in ms
-#define VOLTAGE_STEP 0.1 // in V
-
 #include "qserialprocessor.h"
 
 QTransmissionDialog::QTransmissionDialog(QWidget *parent) :
@@ -62,7 +59,7 @@ void QTransmissionDialog::on_pushButton_2_clicked()
 
 void QTransmissionDialog::on_Ddiscretization_valueChanged(int value)
 {
-    ui->Ediscretization->setText( QString::number(value * TIME_STEP,'f' ,3) );
+    ui->Ediscretization->setText( QString::number(value * 0.1, 'f', 2) );
 }
 
 QSerialProcessor::BitsOrder QTransmissionDialog::getBitsOrder() const
@@ -90,15 +87,16 @@ uint QTransmissionDialog::getBitsNumber() const
 
 void QTransmissionDialog::on_Bdefault_clicked()
 {
-    ui->RBlittleendian->setChecked(true);
-    ui->RBbigendian->setChecked(false);
-    ui->Ediscretization->setText("1.0");
-    ui->Ebits->setText("8");
-    ui->RBbigendian->setEnabled(false);
-    ui->RBlittleendian->setEnabled(false);
+    ui->RBlittleendian->setChecked(false);
+    ui->RBbigendian->setChecked(true);
+    ui->Ddiscretization->setValue(10);
+    ui->Dvoltage->setValue(50);
+    ui->Ebits->setText("10");
+    ui->RBbigendian->setEnabled(true);
+    ui->RBlittleendian->setEnabled(true);
 }
 
 void QTransmissionDialog::on_Dvoltage_valueChanged(int value)
 {
-    ui->Evoltage->setText(QString::number(value * VOLTAGE_STEP));
+    ui->Evoltage->setText(QString::number(value * 0.1, 'f', 1));
 }

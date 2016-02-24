@@ -259,41 +259,56 @@ void MainWindow::closeSerialConnection()
 
 void MainWindow::startRecord()
 {
-    if(!m_outputfile.isOpen())
-    {
-        QString str = QFileDialog::getSaveFileName(this, tr("Save file"), "/records/record.txt", tr("Text file(*.txt)"));
-        m_outputfile.setFileName(str);
-        while(!m_outputfile.open(QFile::WriteOnly))
+    if(pt_harmonicProcessor){
+        if(!m_outputfile.isOpen())
         {
-            QMessageBox msg(QMessageBox::Warning, tr("Warning message"), tr("Can not save"), QMessageBox::Open | QMessageBox::Close, this);
-            if(msg.exec() == QMessageBox::Open)
+            QString str = QFileDialog::getSaveFileName(this, tr("Save file"), "/records/record.txt", tr("Text file(*.txt)"));
+            m_outputfile.setFileName(str);
+            while(!m_outputfile.open(QFile::WriteOnly))
             {
-                str = QFileDialog::getSaveFileName(this, tr("Save file"), "/records/record.txt", tr("Text file(*.txt)"));
-                m_outputfile.setFileName(str);
+                QMessageBox msg(QMessageBox::Warning, tr("Warning message"), tr("Can not save"), QMessageBox::Save | QMessageBox::Close, this);
+                if(msg.exec() == QMessageBox::Save)
+                {
+                    str = QFileDialog::getSaveFileName(this, tr("Save file"), "/records/record.txt", tr("Text file(*.txt)"));
+                    m_outputfile.setFileName(str);
+                }
+                else
+                {
+                    pt_recordAction->setChecked(false);
+                    break;
+                }
             }
-            else
+            if(m_outputfile.isOpen())
             {
-                pt_recordAction->setChecked(false);
-                break;
+                m_textstream.setDevice(&m_outputfile);
+                m_textstream << QString(APP_NAME) + " output record\n"
+                             << "Record was started at " + QDateTime::currentDateTime().toString("dd.MM.yyyy hh.mm.ss") + "\n"
+                             << "discretization period: " << QString::number(pt_harmonicProcessor->getDiscretizationPeriod(), 'f', 2)
+                             << " ms , value unit: " << QString::number(m_transmissionDialog.getReferenceVoltage(), 'f', 1)
+                             << "/" << QString::number( (0x0001 << m_transmissionDialog.getBitsNumber()))
+                             << " V\nValue\n";
+
+                QMessageBox msg(QMessageBox::Information, tr("Record dialog"), tr("What type of counts do you want to record?"), QMessageBox::Ok | QMessageBox::Cancel, this);
+                msg.setButtonText(QMessageBox::Ok, tr("RAW"));
+                msg.setButtonText(QMessageBox::Cancel, tr("Strobe"));
+                if(msg.exec() == QMessageBox::Ok)
+                    connect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), this, SLOT(makeRecord(const quint16*,quint16)));
+                else
+                    connect(pt_harmonicProcessor, SIGNAL(countUpdated(quint16)), this, SLOT(makeRecord(quint16)));
+
+                pt_recordAction->setChecked(true);
+
             }
         }
-        if(m_outputfile.isOpen())
+        else
         {
-            m_textstream.setDevice(&m_outputfile);
-            m_textstream << QString(APP_NAME) + " output record\n"
-                         << "Record was started at " + QDateTime::currentDateTime().toString("dd.MM.yyyy hh.mm.ss") + "\n"
-                         << "discretization period: " << QString::number(m_transmissionDialog.getDiscretizationPeriod(), 'f', 3) // strobe does not effwct on this, this is raw data
-                         << " ms , gen.unit: " << QString::number(m_transmissionDialog.getReferenceVoltage(), 'f', 2)
-                         << "/" << QString::number( (0x00001 << m_transmissionDialog.getBitsNumber()))
-                         << " V\nValue, gen.unit\n";
-            connect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), this, SLOT(makeRecord(const quint16*,quint16)));
-            pt_recordAction->setChecked(true);
+            m_outputfile.close();
+            disconnect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), this, SLOT(makeRecord(const quint16*,quint16)));
+            disconnect(pt_harmonicProcessor, SIGNAL(countUpdated(quint16)), this, SLOT(makeRecord(quint16)));
+            pt_recordAction->setChecked(false);
         }
-    }
-    else
-    {
-        m_outputfile.close();
-        disconnect(pt_serialProcessor, SIGNAL(dataUpdated(const quint16*,quint16)), this, SLOT(makeRecord(const quint16*,quint16)));
+    } else {
+        QMessageBox::warning(this, tr("Warning"), tr("Start capturing first"));
         pt_recordAction->setChecked(false);
     }
 }
@@ -304,6 +319,14 @@ void MainWindow::makeRecord(const quint16*pointer, quint16 length)
    {
        for(quint16 i = 0; i < length; i++)
            m_textstream << pointer[i] << "\n";
+   }
+}
+
+void MainWindow::makeRecord(quint16 value)
+{
+   if(m_outputfile.isOpen())
+   {
+           m_textstream << value << "\n";
    }
 }
 
@@ -334,7 +357,6 @@ void MainWindow::adjustStrobe()
         dial.setMaximum(MAX_STROBE);
         dial.setSingleStep(1);
         dial.setFixedSize(54,54);
-        //dial.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         dial.setValue(pt_harmonicProcessor->getStrobe());
         connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));            
         connect(&dial, &QDial::valueChanged, pt_harmonicProcessor, &QHarmonicProcessor::setStrobe);
@@ -445,7 +467,6 @@ void MainWindow::adjustTimer()
     dial.setPageStep(100);
     dial.setSingleStep(10);
     dial.setFixedSize(54,54);
-    //dial.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     dial.setValue(m_timer.interval());
     connect(&dial, SIGNAL(valueChanged(int)), &label, SLOT(setNum(int)));
     connect(&dial, &QDial::valueChanged, &m_timer, &QTimer::setInterval);
@@ -468,6 +489,6 @@ void MainWindow::closeEvent(QCloseEvent */*event*/)
 
 void MainWindow::updateAxis(int strobe_value)
 {
-    pt_signalPlot->set_axis_names("Count, " + QString::number( 1000 * strobe_value * m_transmissionDialog.getDiscretizationPeriod(), 'f', 1 ) + " us per count",
-                                  "Voltage, " + QString::number( 1000 * m_transmissionDialog.getReferenceVoltage()/(0x00001 << m_transmissionDialog.getBitsNumber()),'f', 3) + " mV per unit");
+    pt_signalPlot->set_axis_names("Count, " + QString::number( strobe_value * m_transmissionDialog.getDiscretizationPeriod(), 'f', 2 ) + " ms per count",
+                                  "Voltage, " + QString::number( 1000 * m_transmissionDialog.getReferenceVoltage()/(0x0001 << m_transmissionDialog.getBitsNumber()),'f', 2) + " mV per unit");
 }

@@ -12,8 +12,8 @@
  ------------------------------------------------------------------------------------------------------*/
 
 #define SERIAL_SPEED 115200 // bps, serial transmission speed
-#define DEFAULT_PIN 0 // pin_id for the sampling
-#define DEFAULT_DELAY 100 // in us
+#define DEFAULT_PIN 5 // pin_id for the sampling
+#define DEFAULT_DELAY 854 // in us
 
 byte m_pin = DEFAULT_PIN;
 int  m_measurement;
