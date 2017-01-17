@@ -4,10 +4,10 @@
 #define MyAppName "adc2pc"
 #define MyAppVersion "1.0.1.0"
 #define MyAppPublisher "pi-null-mezon"
-#define MyAppURL "https://github.com/pi-null-mezon/QVASS"
+#define MyAppURL "https://github.com/pi-null-mezon/QSerialscope.git"
 #define MyAppExeName "adc2pc.exe"
 
-#define QtPath "C:\Qt\5.5\mingw492_32"
+#define QtPath "C:\Qt\5.7\mingw53_32"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -26,7 +26,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 LicenseFile=C:\Programming\QVASS\LICENSE
 InfoBeforeFile=C:\Programming\QVASS\README.md
-OutputDir=C:\Programming\Releases\
+OutputDir=C:\Programming\Releases
 OutputBaseFilename=adc2pc_setup
 Compression=lzma
 SolidCompression=yes
@@ -38,12 +38,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Programming\qvass\build\build-Sources-Desktop_Qt_5_5_1_MinGW_32bit-Release\release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Programming\QSerialscope\build\build-Sources-Desktop_Qt_5_7_0_MinGW_32bit-Release\release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Programming\3rdParties\FFTW\fftw3-32\libfftw3-3.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\plugins\platforms\qwindows.dll"; DestDir: "{app}\platforms"; Flags: ignoreversion
-Source: "{#QtPath}\bin\icuin54.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\icudt54.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\icuuc54.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\bin\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\bin\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\bin\Qt5SerialPort.dll"; DestDir: "{app}"; Flags: ignoreversion
